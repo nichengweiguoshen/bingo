@@ -17,19 +17,37 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; color: #1f2937; }
         .app-container { max-width: 480px; margin: 0 auto; background-color: #ffffff; min-height: 100vh; display: flex; flex-direction: column; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        
+        /* 网格样式 */
         .bingo-grid { display: grid; gap: 6px; padding: 0 16px; transition: all 0.3s ease; }
         .grid-item { aspect-ratio: 1 / 1; background-color: #f9fafb; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 0.85rem; color: #4b5563; cursor: pointer; user-select: none; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid #e5e7eb; text-align: center; padding: 4px; line-height: 1.2; overflow: hidden; word-break: break-all; }
         .grid-item.active { background-color: #fefce8; border-color: #eab308; color: #a16207; font-weight: 600; transform: scale(0.92); box-shadow: inset 0 0 10px rgba(234, 179, 8, 0.1); }
-        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px); opacity: 0; visibility: hidden; transition: all 0.2s ease; }
+        
+        /* 模态框与辅助 UI */
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px); opacity: 0; visibility: hidden; transition: all 0.2s ease; z-index: 50;}
         .modal-overlay.show { opacity: 1; visibility: visible; }
         .modal-content { transform: translateY(20px) scale(0.95); opacity: 0; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .modal-overlay.show .modal-content { transform: translateY(0) scale(1); opacity: 1; }
         .toast-notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px); background-color: rgba(31, 41, 55, 0.9); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; opacity: 0; pointer-events: none; transition: all 0.3s ease; z-index: 100; white-space: nowrap; }
         .toast-notification.show { transform: translateX(-50%) translateY(0); opacity: 1; }
         .progress-ring__circle { transition: stroke-dashoffset 0.4s ease-in-out, stroke 0.3s ease; transform: rotate(-90deg); transform-origin: 50% 50%; }
-        .task-list-scroll::-webkit-scrollbar { width: 4px; }
-        .task-list-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
         .btn-press:active { transform: scale(0.95); }
+        
+        /* 日历专属样式 */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .cal-day-header { font-size: 0.7rem; text-align: center; color: #6b7280; font-weight: 600; padding-bottom: 4px; }
+        .cal-cell { aspect-ratio: 1 / 1; border-radius: 6px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 0.75rem; font-weight: 600; position: relative; }
+        .cal-empty { background-color: transparent; }
+        .cal-no-data { background-color: #f3f4f6; color: #9ca3af; }
+        .cal-partial { background-color: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .cal-bingo { background-color: #fefce8; color: #a16207; border: 2px solid #facc15; box-shadow: 0 2px 4px rgba(250, 204, 21, 0.2); }
+        .cal-today-indicator { position: absolute; bottom: 2px; width: 4px; height: 4px; border-radius: 50%; background-color: #ef4444; }
+        
+        /* 状态标记小圆点 */
+        .mood-dot-start { position: absolute; top: 3px; left: 3px; width: 5px; height: 5px; border-radius: 50%; }
+        .mood-dot-end { position: absolute; bottom: 3px; right: 3px; width: 5px; height: 5px; border-radius: 50%; }
     </style>
 </head>
 <body>
@@ -40,12 +58,18 @@
                 <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Daily Bingo</h1>
                 <p id="dateDisplay" class="text-xs text-gray-500 font-medium uppercase mt-1"></p>
             </div>
-            <button onclick="openSettings()" class="btn-press w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200">
-                <i class="fas fa-sliders-h"></i>
-            </button>
+            <div class="flex space-x-2">
+                <button onclick="openHistory()" class="btn-press w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200">
+                    <i class="fas fa-calendar-check"></i>
+                </button>
+                <button onclick="openSettings()" class="btn-press w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200">
+                    <i class="fas fa-sliders-h"></i>
+                </button>
+            </div>
         </header>
 
-        <section class="px-6 mb-6 flex items-center bg-white rounded-2xl mx-4 p-4 shadow-sm border border-gray-100">
+        <!-- 进度条面板 -->
+        <section class="px-6 mb-4 flex items-center bg-white rounded-2xl mx-4 p-4 shadow-sm border border-gray-100">
             <div class="relative w-14 h-14 flex-shrink-0 flex justify-center items-center mr-4">
                 <svg class="w-full h-full absolute top-0 left-0" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r="42" fill="transparent" stroke="#f3f4f6" stroke-width="8"></circle>
@@ -62,6 +86,24 @@
             </div>
         </section>
 
+        <!-- 【新增】状态评估模块 (Mood Tracking) -->
+        <section class="px-6 mb-5 flex space-x-3">
+            <button onclick="cycleMood('start')" class="flex-1 bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center justify-between transition btn-press">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-sun text-gray-400 text-sm"></i>
+                    <span class="text-xs font-bold text-gray-600">晨间状态</span>
+                </div>
+                <span id="moodStartIcon" class="text-lg text-gray-300"><i class="fas fa-minus-circle"></i></span>
+            </button>
+            <button onclick="cycleMood('end')" class="flex-1 bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center justify-between transition btn-press">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-moon text-gray-400 text-sm"></i>
+                    <span class="text-xs font-bold text-gray-600">晚间复盘</span>
+                </div>
+                <span id="moodEndIcon" class="text-lg text-gray-300"><i class="fas fa-minus-circle"></i></span>
+            </button>
+        </section>
+
         <section class="bingo-grid flex-1" id="gridContainer"></section>
 
         <section class="px-6 py-6 mt-auto border-t border-gray-100 bg-white">
@@ -76,7 +118,59 @@
         </section>
     </div>
 
-    <div id="settingsModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
+    <!-- 历史记录日历模态框 -->
+    <div id="historyModal" class="modal-overlay fixed inset-0 flex items-center justify-center p-4">
+        <div class="modal-content bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-gray-800" id="calMonthDisplay">打卡记录</h3>
+                <button onclick="closeHistory()" class="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex justify-center items-center hover:bg-gray-300">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="p-5">
+                <!-- 统计概览 -->
+                <div class="flex justify-around mb-5 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <div class="text-center">
+                        <p class="text-[10px] text-gray-500 uppercase">总达成</p>
+                        <p class="text-xl font-bold text-yellow-600" id="statTotalBingo">0</p>
+                    </div>
+                    <div class="w-px bg-gray-200"></div>
+                    <div class="text-center">
+                        <p class="text-[10px] text-gray-500 uppercase">当月达成</p>
+                        <p class="text-xl font-bold text-gray-800" id="statMonthBingo">0</p>
+                    </div>
+                </div>
+
+                <div class="calendar-grid mb-2">
+                    <div class="cal-day-header">日</div><div class="cal-day-header">一</div><div class="cal-day-header">二</div>
+                    <div class="cal-day-header">三</div><div class="cal-day-header">四</div><div class="cal-day-header">五</div><div class="cal-day-header">六</div>
+                </div>
+                <div id="calendarContainer" class="calendar-grid"></div>
+                
+                <div class="mt-4 border-t border-gray-100 pt-3 flex flex-col space-y-2 text-[10px] text-gray-500">
+                    <div class="flex justify-between items-center px-2">
+                        <div class="flex space-x-3">
+                            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded bg-[#f3f4f6] inline-block mr-1"></span>无记录</span>
+                            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded bg-[#dbeafe] border border-[#bfdbfe] inline-block mr-1"></span>进行中</span>
+                            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded bg-[#fefce8] border border-[#facc15] inline-block mr-1"></span>Bingo</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center px-2">
+                        <span class="text-gray-400">圆点标记: 晨间状态(左上) / 晚间复盘(右下)</span>
+                        <div class="flex space-x-2">
+                            <span class="text-green-500"><i class="fas fa-circle text-[8px]"></i> 佳</span>
+                            <span class="text-yellow-500"><i class="fas fa-circle text-[8px]"></i> 平</span>
+                            <span class="text-red-500"><i class="fas fa-circle text-[8px]"></i> 差</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设置模态框 -->
+    <div id="settingsModal" class="modal-overlay fixed inset-0 flex items-center justify-center p-4">
         <div class="modal-content bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                 <h3 class="font-bold text-gray-800">系统设置</h3>
@@ -84,13 +178,11 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-
-            <div class="p-5 overflow-y-auto task-list-scroll">
+            <div class="p-5 overflow-y-auto custom-scroll">
                 <div class="mb-5">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">选择矩阵难度</label>
                     <div class="flex space-x-2" id="gridSizeSelector"></div>
                 </div>
-
                 <div class="mb-5">
                     <div class="flex justify-between items-center mb-2">
                         <label class="block text-sm font-semibold text-gray-700">我的任务库</label>
@@ -100,46 +192,51 @@
                         <input type="text" id="newTaskInput" placeholder="输入新任务..." class="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                         <button onclick="addNewTask()" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-600 btn-press">添加</button>
                     </div>
-                    <div id="taskLibraryList" class="space-y-2 border border-gray-100 rounded-lg p-2 bg-gray-50 min-h-[120px] max-h-[180px] overflow-y-auto task-list-scroll"></div>
+                    <div id="taskLibraryList" class="space-y-2 border border-gray-100 rounded-lg p-2 bg-gray-50 min-h-[120px] max-h-[180px] overflow-y-auto custom-scroll"></div>
                 </div>
-
                 <div class="border-t border-gray-100 pt-4">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">数据管理 (防丢失)</label>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">数据管理</label>
                     <div class="flex space-x-2">
-                        <button onclick="exportData()" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-xs font-semibold hover:bg-gray-200 btn-press">
-                            <i class="fas fa-file-export mr-1"></i>导出备份
-                        </button>
-                        <button onclick="document.getElementById('importFile').click()" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-xs font-semibold hover:bg-gray-200 btn-press">
-                            <i class="fas fa-file-import mr-1"></i>导入恢复
-                        </button>
+                        <button onclick="exportData()" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-xs font-semibold hover:bg-gray-200 btn-press"><i class="fas fa-file-export mr-1"></i>导出</button>
+                        <button onclick="document.getElementById('importFile').click()" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-xs font-semibold hover:bg-gray-200 btn-press"><i class="fas fa-file-import mr-1"></i>导入</button>
                         <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
                     </div>
                 </div>
             </div>
-
             <div class="p-4 border-t border-gray-100 bg-white">
-                <button onclick="applySettings()" class="w-full bg-gray-900 text-white py-3 rounded-xl font-bold text-sm btn-press">保存并应用新矩阵</button>
+                <button onclick="applySettings()" class="w-full bg-gray-900 text-white py-3 rounded-xl font-bold text-sm btn-press">保存</button>
             </div>
         </div>
     </div>
 
-    <div id="toast" class="toast-notification">提示内容</div>
+    <div id="toast" class="toast-notification"></div>
 
     <script>
-        // --- Service Worker 注册 (PWA 核心) ---
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW 注册成功', reg.scope))
-                    .catch(err => console.log('SW 注册失败', err));
-            });
+            window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
         }
 
-        // --- 应用逻辑 ---
         const STORAGE_KEY = 'dailyBingoData_pwa';
         const DEFAULT_TASKS = ["早睡", "阅读", "健身", "写日记", "冥想", "喝水", "不吃宵夜", "学外语", "整理房间", "拉伸", "做饭", "复盘", "看纪录片", "练字", "记账", "断舍离"];
 
-        let appState = { gridSize: 4, taskLibrary: [...DEFAULT_TASKS], currentGridTasks: [], currentGridStates: [], hasBingoToday: false };
+        // 预设三种状态评估标准
+        const MOOD_LEVELS = [
+            { val: null, icon: '<i class="fas fa-minus-circle"></i>', color: 'text-gray-300', dot: '' },
+            { val: 'good', icon: '<i class="fas fa-smile"></i>', color: 'text-green-500', dot: 'bg-green-500' },
+            { val: 'normal', icon: '<i class="fas fa-meh"></i>', color: 'text-yellow-500', dot: 'bg-yellow-500' },
+            { val: 'bad', icon: '<i class="fas fa-frown"></i>', color: 'text-red-500', dot: 'bg-red-500' }
+        ];
+
+        let appState = { 
+            gridSize: 4, 
+            taskLibrary: [...DEFAULT_TASKS], 
+            currentGridTasks: [], 
+            currentGridStates: [], 
+            hasBingoToday: false,
+            lastGeneratedDate: '', 
+            todayMood: { start: null, end: null }, // 新增：当日实时状态
+            history: {} 
+        };
 
         const els = {
             gridContainer: document.getElementById('gridContainer'),
@@ -148,13 +245,26 @@
             progressStatusText: document.getElementById('progressStatusText'),
             dateDisplay: document.getElementById('dateDisplay'),
             gridSizeBadge: document.getElementById('gridSizeBadge'),
-            modal: document.getElementById('settingsModal'),
+            settingsModal: document.getElementById('settingsModal'),
+            historyModal: document.getElementById('historyModal'),
             taskLibraryList: document.getElementById('taskLibraryList'),
             newTaskInput: document.getElementById('newTaskInput'),
             taskCount: document.getElementById('taskCount'),
             gridSizeSelector: document.getElementById('gridSizeSelector'),
-            toast: document.getElementById('toast')
+            toast: document.getElementById('toast'),
+            calContainer: document.getElementById('calendarContainer'),
+            calMonthDisplay: document.getElementById('calMonthDisplay'),
+            statTotalBingo: document.getElementById('statTotalBingo'),
+            statMonthBingo: document.getElementById('statMonthBingo'),
+            moodStartIcon: document.getElementById('moodStartIcon'),
+            moodEndIcon: document.getElementById('moodEndIcon')
         };
+
+        function getLocalTodayStr() {
+            const d = new Date();
+            const tzOffset = d.getTimezoneOffset() * 60000;
+            return new Date(d.getTime() - tzOffset).toISOString().split('T')[0];
+        }
 
         let toastTimeout;
         function showToast(message) {
@@ -164,58 +274,74 @@
         }
 
         function initApp() {
-            loadState(); renderDate();
-            if (!appState.currentGridTasks.length || appState.currentGridTasks.length !== appState.gridSize ** 2) generateNewGridData();
-            renderGrid(); calculateBingoEngine();
+            loadState(); 
+            renderDate();
+            
+            const todayStr = getLocalTodayStr();
+            
+            // 过零点自动重置
+            if (appState.lastGeneratedDate !== todayStr) {
+                generateNewGridData();
+            }
+
+            renderGrid(); 
+            updateMoodUI();
+            calculateBingoEngine(); // 顺带初始化 UI 并保存基础历史记录
         }
 
         function loadState() {
             const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) try { appState = { ...appState, ...JSON.parse(saved) }; } catch (e) { console.error(e); }
+            if (saved) try { appState = { ...appState, ...JSON.parse(saved) }; } catch (e) {}
+            // 兼容历史版本
+            if (!appState.history) appState.history = {}; 
+            if (!appState.todayMood) appState.todayMood = { start: null, end: null };
         }
 
         function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); }
 
-        // --- 数据导出/导入逻辑 ---
-        function exportData() {
-            const dataStr = JSON.stringify(appState);
-            const blob = new Blob([dataStr], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Bingo备份_${new Date().toISOString().slice(0,10)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast("备份文件已下载");
+        // --- 【新增】状态切换与 UI ---
+        function cycleMood(type) {
+            vibrate(20);
+            let currentVal = appState.todayMood[type];
+            let currentIndex = MOOD_LEVELS.findIndex(m => m.val === currentVal);
+            let nextIndex = (currentIndex + 1) % MOOD_LEVELS.length;
+            
+            appState.todayMood[type] = MOOD_LEVELS[nextIndex].val;
+            
+            updateMoodUI();
+            syncHistoryData(); // 状态更新后立刻同步至历史记录
         }
 
-        function importData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const imported = JSON.parse(e.target.result);
-                    if (imported.taskLibrary && imported.gridSize) {
-                        appState = { ...appState, ...imported };
-                        saveState();
-                        initApp();
-                        renderSettingsPanel();
-                        showToast("数据恢复成功！");
-                    } else {
-                        showToast("文件格式不正确");
-                    }
-                } catch (err) {
-                    showToast("解析数据失败");
-                }
+        function updateMoodUI() {
+            const renderIcon = (type, elId) => {
+                const moodObj = MOOD_LEVELS.find(m => m.val === appState.todayMood[type]) || MOOD_LEVELS[0];
+                const el = document.getElementById(elId);
+                el.innerHTML = moodObj.icon;
+                el.className = `text-lg ${moodObj.color}`;
             };
-            reader.readAsText(file);
-            event.target.value = ''; // Reset input
+            renderIcon('start', 'moodStartIcon');
+            renderIcon('end', 'moodEndIcon');
         }
 
-        // --- 核心引擎与渲染 (保持原样) ---
+        // 抽离同步历史记录的方法，以确保任务点击和状态更改都能实时触发记录
+        function syncHistoryData() {
+            const n = appState.gridSize;
+            const completedCount = appState.currentGridStates.filter(Boolean).length;
+            const percent = Math.floor((completedCount / (n * n)) * 100);
+            const todayStr = getLocalTodayStr();
+
+            // 如果今日有 BINGO 或者 进度为 100，修正 percent 为 100
+            const finalPercent = appState.hasBingoToday ? 100 : percent;
+
+            appState.history[todayStr] = {
+                percent: finalPercent,
+                isBingo: appState.hasBingoToday,
+                moodStart: appState.todayMood.start,
+                moodEnd: appState.todayMood.end
+            };
+            saveState();
+        }
+
         function calculateBingoEngine() {
             const n = appState.gridSize, states = appState.currentGridStates;
             let isBingo = false, winningLines = [];
@@ -223,21 +349,98 @@
             for (let c = 0; c < n; c++) winningLines.push(Array.from({length: n}, (_, i) => i * n + c));
             winningLines.push(Array.from({length: n}, (_, i) => i * n + i), Array.from({length: n}, (_, i) => i * n + (n - 1 - i)));
             isBingo = winningLines.some(line => line.every(i => states[i]));
+            
             let percent = Math.floor((states.filter(Boolean).length / (n * n)) * 100);
-            if (isBingo) { percent = 100; if (!appState.hasBingoToday) { appState.hasBingoToday = true; triggerVictoryFX(); } } 
-            else appState.hasBingoToday = false;
-            updateProgressUI(percent, isBingo); saveState(); 
+            
+            if (isBingo) { 
+                percent = 100; 
+                if (!appState.hasBingoToday) { 
+                    appState.hasBingoToday = true; 
+                    triggerVictoryFX(); 
+                } 
+            } else {
+                appState.hasBingoToday = false;
+            }
+
+            syncHistoryData();
+            updateProgressUI(percent, isBingo); 
         }
 
+        // --- 日历渲染逻辑 ---
+        function openHistory() { vibrate(20); renderCalendar(); els.historyModal.classList.add('show'); }
+        function closeHistory() { els.historyModal.classList.remove('show'); }
+
+        function renderCalendar() {
+            const now = new Date();
+            const year = now.getFullYear(), month = now.getMonth();
+            const todayStr = getLocalTodayStr();
+            
+            els.calMonthDisplay.innerText = `${year}年 ${month + 1}月 打卡记录`;
+
+            const firstDayOfMonth = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            els.calContainer.innerHTML = '';
+            
+            for (let i = 0; i < firstDayOfMonth; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'cal-cell cal-empty';
+                els.calContainer.appendChild(emptyCell);
+            }
+
+            let monthBingoCount = 0;
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const cell = document.createElement('div');
+                const record = appState.history[dateStr];
+                
+                let cellClass = 'cal-cell cal-no-data';
+                let innerHtml = `${i}`;
+
+                if (record) {
+                    if (record.isBingo) {
+                        cellClass = 'cal-cell cal-bingo';
+                        innerHtml = `${i}<i class="fas fa-star text-[8px] mt-0.5"></i>`;
+                        monthBingoCount++;
+                    } else if (record.percent > 0 || record.moodStart || record.moodEnd) {
+                        cellClass = 'cal-cell cal-partial';
+                    }
+
+                    // 【新增】绘制小圆点代表早晚状态
+                    const getDotColor = (val) => (MOOD_LEVELS.find(m => m.val === val) || {}).dot || '';
+                    if (record.moodStart) innerHtml += `<div class="mood-dot-start ${getDotColor(record.moodStart)}"></div>`;
+                    if (record.moodEnd) innerHtml += `<div class="mood-dot-end ${getDotColor(record.moodEnd)}"></div>`;
+                }
+
+                if (dateStr === todayStr) innerHtml += `<span class="cal-today-indicator"></span>`;
+
+                cell.className = cellClass;
+                cell.innerHTML = innerHtml;
+                els.calContainer.appendChild(cell);
+            }
+
+            let totalBingoCount = Object.values(appState.history).filter(r => r.isBingo).length;
+            els.statTotalBingo.innerText = totalBingoCount;
+            els.statMonthBingo.innerText = monthBingoCount;
+        }
+
+        // --- 基础渲染 ---
         function renderDate() { els.dateDisplay.innerText = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }).replace(/\//g, ' · '); }
 
         function generateNewGridData() {
             let total = appState.gridSize ** 2, pool = [...appState.taskLibrary];
-            while (pool.length < total) pool.push(`缺省任务 ${pool.length + 1}`);
+            while (pool.length < total) pool.push(`任务 ${pool.length + 1}`);
             pool.sort(() => Math.random() - 0.5);
             appState.currentGridTasks = pool.slice(0, total);
             appState.currentGridStates = new Array(total).fill(false);
             appState.hasBingoToday = false;
+            // 清理当日实时状态
+            appState.todayMood = { start: null, end: null };
+            appState.lastGeneratedDate = getLocalTodayStr(); 
+            
+            updateMoodUI();
+            saveState();
         }
 
         function renderGrid() {
@@ -268,9 +471,10 @@
             els.progressStatusText.className = isBingo ? "text-base font-bold text-yellow-600" : "text-base font-bold text-gray-900";
         }
 
+        // --- 设置与辅助方法 (保持不变) ---
         let tempGridSize = appState.gridSize;
-        function openSettings() { vibrate(20); tempGridSize = appState.gridSize; renderSettingsPanel(); els.modal.classList.add('show'); }
-        function closeSettings() { els.modal.classList.remove('show'); }
+        function openSettings() { vibrate(20); tempGridSize = appState.gridSize; renderSettingsPanel(); els.settingsModal.classList.add('show'); }
+        function closeSettings() { els.settingsModal.classList.remove('show'); }
 
         function renderSettingsPanel() {
             els.gridSizeSelector.innerHTML = '';
@@ -299,16 +503,11 @@
         }
 
         function removeTaskFromLib(i) { appState.taskLibrary.splice(i, 1); vibrate(20); renderSettingsPanel(); saveState(); }
-
-        function applySettings() {
-            if (appState.taskLibrary.length < tempGridSize ** 2) showToast(`已自动补充默认任务`);
-            else showToast("设置已保存");
-            vibrate([50, 50, 50]); appState.gridSize = tempGridSize; generateNewGridData(); renderGrid(); calculateBingoEngine(); closeSettings();
-        }
-
+        function applySettings() { vibrate([50, 50, 50]); appState.gridSize = tempGridSize; generateNewGridData(); renderGrid(); calculateBingoEngine(); closeSettings(); }
         function shuffleGrid() { vibrate(40); els.gridContainer.style.opacity = '0'; setTimeout(() => { generateNewGridData(); renderGrid(); calculateBingoEngine(); els.gridContainer.style.opacity = '1'; showToast("已重新生成"); }, 200); }
         function resetGridState() { vibrate(30); appState.currentGridStates.fill(false); appState.hasBingoToday = false; Array.from(els.gridContainer.children).forEach(el => el.classList.remove('active')); calculateBingoEngine(); showToast("状态已清空"); }
         function vibrate(p) { if (navigator.vibrate) navigator.vibrate(p); }
+        
         function triggerVictoryFX() {
             vibrate([100, 50, 200, 50, 400]); const end = Date.now() + 2000, colors = ['#eab308', '#3b82f6', '#ef4444', '#10b981'];
             (function frame() {
@@ -316,6 +515,18 @@
                 confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1, y: 0.8 }, colors });
                 if (Date.now() < end) requestAnimationFrame(frame);
             }());
+        }
+
+        function exportData() {
+            const blob = new Blob([JSON.stringify(appState)], { type: "application/json" });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Bingo_${getLocalTodayStr()}.json`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); showToast("已导出");
+        }
+        function importData(e) {
+            const file = e.target.files[0]; if (!file) return;
+            const r = new FileReader();
+            r.onload = ev => { try { appState = { ...appState, ...JSON.parse(ev.target.result) }; saveState(); initApp(); showToast("恢复成功"); } catch (err) { showToast("解析失败"); } };
+            r.readAsText(file); e.target.value = '';
         }
 
         window.addEventListener('DOMContentLoaded', initApp);
