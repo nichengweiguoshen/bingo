@@ -166,14 +166,14 @@
 
             <section class="px-6 mb-6 flex-1 overflow-y-auto no-scrollbar">
                 <div class="flex items-center justify-between mb-3 px-1">
-                    <h2 class="text-sm font-bold text-slate-800" id="discTodayLabel">今日纪律程序</h2>
+                    <h2 class="text-sm font-bold text-slate-800" id="discTodayLabel">今日必做程序</h2>
                 </div>
                 <div id="dashboardList" class="space-y-3"></div>
             </section>
 
             <section class="px-6 mb-4">
                 <div class="bg-white rounded-2xl p-3 border border-dashed border-slate-200">
-                    <input type="text" id="dailyNote" onchange="updateNote()" placeholder="如遇不可抗力，在此作客观归因..." class="w-full bg-transparent border-none text-xs text-slate-600 focus:ring-0 focus:outline-none placeholder:text-slate-300">
+                    <input type="text" id="dailyNote" oninput="updateNote()" placeholder="如遇不可抗力，在此作客观归因..." class="w-full bg-transparent border-none text-xs text-slate-600 focus:ring-0 focus:outline-none placeholder:text-slate-300">
                 </div>
             </section>
         </div>
@@ -312,7 +312,7 @@
             r.readAsText(file); e.target.value = '';
         }
 
-        // ==================== BINGO 系统 (保留原有逻辑) ====================
+        // ==================== BINGO 系统 ====================
         const BINGO_KEY = 'dailyBingoData_pwa';
         const DEFAULT_BINGO_TASKS = ["早睡", "阅读", "看盘复盘", "整理房间", "冥想", "喝水", "拉伸", "断舍离", "看纪录片"];
         const MOODS = [{ val: null, icon: '<i class="fas fa-minus-circle"></i>', color: 'text-gray-300', dot: '' }, { val: 'good', icon: '<i class="fas fa-smile"></i>', color: 'text-green-500', dot: 'bg-green-500' }, { val: 'normal', icon: '<i class="fas fa-meh"></i>', color: 'text-yellow-500', dot: 'bg-yellow-500' }, { val: 'bad', icon: '<i class="fas fa-frown"></i>', color: 'text-red-500', dot: 'bg-red-500' }];
@@ -421,22 +421,20 @@
         function applyBingoSettings() { vibrate([50, 50]); bingoState.gridSize = tempGridSize; generateBingoGrid(); closeBingoSettings(); showToast("设置已应用"); }
 
 
-        // ==================== 纪律系统 (DISCIPLINE) 调度更新版 ====================
+        // ==================== 纪律系统 (DISCIPLINE) 核心重构版 ====================
         const DISC_KEY = 'discipline_system_data';
         
-        // 新增：默认提供 schedule 属性，表示周日(0)到周六(6)
         const DEFAULT_DISC_TASKS = [
             { id: 't1', name: "进食比例", if: "开始吃正餐", then: "按 1/2蔬菜、1/4蛋白质、1/4碳水装盘并顺序吃完", schedule: [0,1,2,3,4,5,6] },
             { id: 't2', name: "液体规则", if: "口渴", then: "只喝水、茶或黑咖啡", schedule: [0,1,2,3,4,5,6] },
-            { id: 't3', name: "有氧心率", if: "做有氧运动", then: "保持 Zone 2 心率持续 >40 分钟", schedule: [1,3,5] } // 示例：仅一三五触发
+            { id: 't3', name: "有氧心率", if: "做有氧运动", then: "保持 Zone 2 心率持续 >40 分钟", schedule: [1,3,5] } 
         ];
 
         let discState = { tasks: DEFAULT_DISC_TASKS, logs: {}, notes: {} };
 
-        // 核心调度器：判断某任务在指定日期是否需要执行
         function isTaskActiveOnDate(task, dateObj) {
-            if (!task.schedule) return true; // 向后兼容旧数据
-            const dayOfWeek = dateObj.getDay(); // 0(周日) - 6(周六)
+            if (!task.schedule) return true; 
+            const dayOfWeek = dateObj.getDay(); 
             return task.schedule.includes(dayOfWeek);
         }
 
@@ -444,7 +442,7 @@
             const saved = localStorage.getItem(DISC_KEY);
             if (saved) discState = JSON.parse(saved);
             
-            // 数据迁移兼容处理：为旧数据补充 schedule 字段
+            // 兼容迁移
             discState.tasks.forEach(t => { if(!t.schedule) t.schedule = [0,1,2,3,4,5,6]; });
 
             document.getElementById('discDateDisplay').innerText = new Date().toDateString();
@@ -453,7 +451,10 @@
             renderDiscDashboard(); 
             renderHeatmap();
         }
-        function saveDisc() { localStorage.setItem(DISC_KEY, JSON.stringify(discState)); }
+        
+        function saveDisc() { 
+            localStorage.setItem(DISC_KEY, JSON.stringify(discState)); 
+        }
 
         function renderDiscDashboard() {
             const container = document.getElementById('dashboardList');
@@ -461,9 +462,7 @@
             const todayObj = new Date();
             const todayLogs = discState.logs[todayStr] || {};
             
-            // 过滤：只保留今天需要执行的任务
             const activeTasks = discState.tasks.filter(t => isTaskActiveOnDate(t, todayObj));
-            
             document.getElementById('discTodayLabel').innerText = `今日必做程序 (${activeTasks.length})`;
 
             if (activeTasks.length === 0) {
@@ -493,44 +492,41 @@
             saveDisc(); renderDiscDashboard(); renderHeatmap();
         }
 
-        function updateNote() { discState.notes[getTodayDateStr()] = document.getElementById('dailyNote').value; saveDisc(); }
+        function updateNote() { 
+            discState.notes[getTodayDateStr()] = document.getElementById('dailyNote').value; 
+            saveDisc(); 
+        }
 
-        // 热力图重构：动态核对历史日期的必做任务数
         function renderHeatmap() {
             const grid = document.getElementById('heatmapGrid'); grid.innerHTML = '';
             let streak = 0; let streakBroken = false;
             
-            for (let i = 83; i >= 0; i--) { // 过去12周
+            for (let i = 83; i >= 0; i--) { 
                 const d = new Date(); d.setDate(new Date().getDate() - i);
                 const key = d.toLocaleDateString('zh-CN', {timeZone: 'Asia/Shanghai'}).replace(/\//g, '-');
                 const log = discState.logs[key] || {};
                 
-                // 找出"那天"需要执行的任务
                 const requiredTasks = discState.tasks.filter(t => isTaskActiveOnDate(t, d));
                 const totalRequired = requiredTasks.length;
                 
                 let completedCount = 0;
                 requiredTasks.forEach(t => { if(log[t.id]) completedCount++; });
 
-                let ratio = 1; // 默认 100%，如果当天无需任务（合规休息），则保持满绿，不破坏 Streak
-                if (totalRequired > 0) {
-                    ratio = completedCount / totalRequired;
-                }
+                let ratio = 1; 
+                if (totalRequired > 0) ratio = completedCount / totalRequired;
                 
                 let level = '';
-                if (totalRequired === 0) level = 'level-4'; // 计划内休息，判定为完美执行
+                if (totalRequired === 0) level = 'level-4'; 
                 else if (ratio > 0 && ratio <= 0.3) level = 'level-1';
                 else if (ratio > 0.3 && ratio <= 0.6) level = 'level-2';
                 else if (ratio > 0.6 && ratio < 1) level = 'level-3';
                 else if (ratio === 1) level = 'level-4';
 
-                // 计算 Streaks
                 if (ratio === 1 && !streakBroken) streak++;
                 else if (i > 0) { streak = 0; if (ratio < 1) streakBroken = true; }
 
                 const cell = document.createElement('div'); 
                 cell.className = `heatmap-cell ${level}`;
-                // 增加 Title 以便桌面端排查记录
                 cell.title = `${key}: ${completedCount}/${totalRequired} ${totalRequired === 0 ? '(休)' : ''}`;
                 grid.appendChild(cell);
             }
@@ -538,9 +534,19 @@
             grid.scrollLeft = grid.scrollWidth;
         }
 
-        // --- 纪律设置更新（增加周日历触控排期） ---
-        function openDiscSettings() { vibrate(10); renderDiscSettings(); document.getElementById('discSettingsModal').classList.add('show'); }
-        function closeDiscSettings() { document.getElementById('discSettingsModal').classList.remove('show'); renderDiscDashboard(); renderHeatmap(); }
+        // --- 纪律设置 ---
+        function openDiscSettings() { 
+            vibrate(10); 
+            renderDiscSettings(); 
+            document.getElementById('discSettingsModal').classList.add('show'); 
+        }
+        
+        function closeDiscSettings() { 
+            document.getElementById('discSettingsModal').classList.remove('show'); 
+            renderDiscDashboard(); 
+            renderHeatmap(); 
+            showToast("系统纪律已更新");
+        }
         
         function renderDiscSettings() {
             const list = document.getElementById('settingsTaskList');
@@ -549,16 +555,20 @@
             list.innerHTML = discState.tasks.map((t, i) => {
                 const sched = t.schedule || [0,1,2,3,4,5,6];
                 
-                // 生成星期切换按钮
+                // 解决引号导致的渲染截断问题
+                const safeName = (t.name || '').replace(/"/g, '&quot;');
+                const safeIf = (t.if || '').replace(/"/g, '&quot;');
+                const safeThen = (t.then || '').replace(/"/g, '&quot;');
+
                 const dayButtons = dayNames.map((dName, dIdx) => `
                     <button onclick="toggleDiscSchedule(${i}, ${dIdx})" class="w-6 h-6 rounded-full text-[10px] font-bold transition flex items-center justify-center ${sched.includes(dIdx) ? 'bg-blue-500 text-white shadow-sm' : 'bg-slate-100 text-slate-400'}">${dName}</button>
                 `).join('');
 
                 return `
                 <div class="p-3 bg-white rounded-xl relative border border-slate-100 shadow-sm">
-                    <input type="text" value="${t.name}" onchange="updateDiscTask(${i}, 'name', this.value)" class="w-[85%] bg-transparent border-none font-black text-xs p-0 mb-2 text-slate-800 focus:ring-0 focus:outline-none placeholder:text-slate-300" placeholder="程序名称...">
-                    <div class="flex text-[10px] mt-1 items-center"><span class="text-slate-400 font-bold w-10">IF:</span><input type="text" value="${t.if}" onchange="updateDiscTask(${i}, 'if', this.value)" class="flex-1 bg-transparent border-none p-0 text-slate-600 focus:ring-0 focus:outline-none placeholder:text-slate-300" placeholder="触发条件..."></div>
-                    <div class="flex text-[10px] mt-1 items-center"><span class="text-blue-500 font-bold w-10">THEN:</span><input type="text" value="${t.then}" onchange="updateDiscTask(${i}, 'then', this.value)" class="flex-1 bg-transparent border-none p-0 text-slate-600 focus:ring-0 focus:outline-none placeholder:text-slate-300" placeholder="必须执行的客观动作..."></div>
+                    <input type="text" value="${safeName}" oninput="updateDiscTask(${i}, 'name', this.value)" class="w-[85%] bg-transparent border-none font-black text-xs p-0 mb-2 text-slate-800 focus:ring-0 focus:outline-none placeholder:text-slate-300" placeholder="程序名称...">
+                    <div class="flex text-[10px] mt-1 items-center"><span class="text-slate-400 font-bold w-10">IF:</span><input type="text" value="${safeIf}" oninput="updateDiscTask(${i}, 'if', this.value)" class="flex-1 bg-transparent border-none p-0 text-slate-600 focus:ring-0 focus:outline-none placeholder:text-slate-300" placeholder="触发条件..."></div>
+                    <div class="flex text-[10px] mt-1 items-center"><span class="text-blue-500 font-bold w-10">THEN:</span><input type="text" value="${safeThen}" oninput="updateDiscTask(${i}, 'then', this.value)" class="flex-1 bg-transparent border-none p-0 text-slate-600 focus:ring-0 focus:outline-none placeholder:text-slate-300" placeholder="必须执行的客观动作..."></div>
                     
                     <div class="mt-3 pt-3 border-t border-slate-50 flex justify-between items-center">
                         <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Schedule</span>
@@ -571,7 +581,6 @@
             }).join('');
         }
 
-        // 切换任务的星期调度
         function toggleDiscSchedule(taskIdx, dayIdx) {
             vibrate(10);
             let sched = discState.tasks[taskIdx].schedule || [0,1,2,3,4,5,6];
@@ -582,12 +591,28 @@
             }
             discState.tasks[taskIdx].schedule = sched;
             saveDisc();
-            renderDiscSettings(); // 局部刷新 UI
+            renderDiscSettings(); 
         }
 
-        function updateDiscTask(idx, field, val) { discState.tasks[idx][field] = val; saveDisc(); }
-        function addNewTaskTemplate() { discState.tasks.push({ id: 't'+Date.now(), name: "新纪律程序", if: "", then: "", schedule: [0,1,2,3,4,5,6] }); saveDisc(); renderDiscSettings(); }
-        function removeDiscTask(idx) { discState.tasks.splice(idx, 1); saveDisc(); renderDiscSettings(); }
+        function updateDiscTask(idx, field, val) { 
+            discState.tasks[idx][field] = val; 
+            saveDisc(); 
+        }
+        
+        function addNewTaskTemplate() { 
+            discState.tasks.push({ id: 't'+Date.now()+Math.floor(Math.random()*100), name: "新纪律程序", if: "", then: "", schedule: [0,1,2,3,4,5,6] }); 
+            saveDisc(); 
+            renderDiscSettings(); 
+            // 自动滚动到底部
+            const list = document.getElementById('settingsTaskList');
+            setTimeout(() => { list.parentElement.scrollTop = list.parentElement.scrollHeight; }, 50);
+        }
+        
+        function removeDiscTask(idx) { 
+            discState.tasks.splice(idx, 1); 
+            saveDisc(); 
+            renderDiscSettings(); 
+        }
 
         // ==================== 启动 ====================
         window.addEventListener('DOMContentLoaded', () => {
