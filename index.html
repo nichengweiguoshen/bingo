@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Daily Bingo</title>
+    <title>Execution System</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#ffffff">
@@ -14,28 +14,25 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; color: #1f2937; }
-        .app-container { max-width: 480px; margin: 0 auto; background-color: #ffffff; min-height: 100vh; display: flex; flex-direction: column; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap');
         
-        /* 网格样式 */
+        :root {
+            --bg-empty: #ebedf0; --bg-l1: #9be9a8; --bg-l2: #40c463; --bg-l3: #30a14e; --bg-l4: #216e39;
+        }
+
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; color: #1f2937; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .app-container { max-width: 480px; margin: 0 auto; background-color: #ffffff; min-height: 100vh; display: flex; flex-direction: column; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); position: relative; padding-bottom: 70px; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* --- Bingo 专属样式 --- */
         .bingo-grid { display: grid; gap: 6px; padding: 0 16px; transition: all 0.3s ease; }
         .grid-item { aspect-ratio: 1 / 1; background-color: #f9fafb; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 0.85rem; color: #4b5563; cursor: pointer; user-select: none; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid #e5e7eb; text-align: center; padding: 4px; line-height: 1.2; overflow: hidden; word-break: break-all; }
         .grid-item.active { background-color: #fefce8; border-color: #eab308; color: #a16207; font-weight: 600; transform: scale(0.92); box-shadow: inset 0 0 10px rgba(234, 179, 8, 0.1); }
-        
-        /* 模态框与辅助 UI */
-        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px); opacity: 0; visibility: hidden; transition: all 0.2s ease; z-index: 50;}
-        .modal-overlay.show { opacity: 1; visibility: visible; }
-        .modal-content { transform: translateY(20px) scale(0.95); opacity: 0; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        .modal-overlay.show .modal-content { transform: translateY(0) scale(1); opacity: 1; }
-        .toast-notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px); background-color: rgba(31, 41, 55, 0.9); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; opacity: 0; pointer-events: none; transition: all 0.3s ease; z-index: 100; white-space: nowrap; }
-        .toast-notification.show { transform: translateX(-50%) translateY(0); opacity: 1; }
         .progress-ring__circle { transition: stroke-dashoffset 0.4s ease-in-out, stroke 0.3s ease; transform: rotate(-90deg); transform-origin: 50% 50%; }
-        .custom-scroll::-webkit-scrollbar { width: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
-        .btn-press:active { transform: scale(0.95); }
         
-        /* 日历专属样式 */
+        /* --- Bingo 日历专属样式 --- */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
         .cal-day-header { font-size: 0.7rem; text-align: center; color: #6b7280; font-weight: 600; padding-bottom: 4px; }
         .cal-cell { aspect-ratio: 1 / 1; border-radius: 6px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 0.75rem; font-weight: 600; position: relative; }
@@ -44,493 +41,560 @@
         .cal-partial { background-color: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
         .cal-bingo { background-color: #fefce8; color: #a16207; border: 2px solid #facc15; box-shadow: 0 2px 4px rgba(250, 204, 21, 0.2); }
         .cal-today-indicator { position: absolute; bottom: 2px; width: 4px; height: 4px; border-radius: 50%; background-color: #ef4444; }
-        
-        /* 状态标记小圆点 */
         .mood-dot-start { position: absolute; top: 3px; left: 3px; width: 5px; height: 5px; border-radius: 50%; }
         .mood-dot-end { position: absolute; bottom: 3px; right: 3px; width: 5px; height: 5px; border-radius: 50%; }
+
+        /* --- 纪律系统专属样式 --- */
+        .task-card { transition: all 0.2s ease; border: 1px solid #f1f5f9; }
+        .task-card:active { transform: scale(0.98); }
+        .checkbox-custom { width: 28px; height: 28px; border-radius: 8px; border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .checkbox-custom.checked { background-color: #22c55e; border-color: #22c55e; color: white; }
+        .heatmap-container { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 1fr); gap: 3px; overflow-x: auto; padding-bottom: 10px; }
+        .heatmap-cell { width: 11px; height: 11px; border-radius: 2px; background-color: var(--bg-empty); }
+        .level-1 { background-color: var(--bg-l1); } .level-2 { background-color: var(--bg-l2); } .level-3 { background-color: var(--bg-l3); } .level-4 { background-color: var(--bg-l4); }
+
+        /* --- 通用辅助样式 --- */
+        .btn-press:active { transform: scale(0.95); }
+        .toast-notification { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px); background-color: rgba(31, 41, 55, 0.9); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; opacity: 0; pointer-events: none; transition: all 0.3s ease; z-index: 100; white-space: nowrap; }
+        .toast-notification.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        
+        /* 模态框 */
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px); opacity: 0; visibility: hidden; transition: all 0.2s ease; z-index: 50;}
+        .modal-overlay.show { opacity: 1; visibility: visible; }
+        .modal-content { transform: translateY(20px) scale(0.95); opacity: 0; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .modal-overlay.show .modal-content { transform: translateY(0) scale(1); opacity: 1; }
     </style>
 </head>
 <body>
 
-    <div class="app-container relative">
-        <header class="pt-8 pb-4 px-6 flex justify-between items-end">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Daily Bingo</h1>
-                <p id="dateDisplay" class="text-xs text-gray-500 font-medium uppercase mt-1"></p>
-            </div>
-            <div class="flex space-x-2">
-                <button onclick="openHistory()" class="btn-press w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200">
-                    <i class="fas fa-calendar-check"></i>
-                </button>
-                <button onclick="openSettings()" class="btn-press w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200">
-                    <i class="fas fa-sliders-h"></i>
-                </button>
-            </div>
-        </header>
-
-        <!-- 进度条面板 -->
-        <section class="px-6 mb-4 flex items-center bg-white rounded-2xl mx-4 p-4 shadow-sm border border-gray-100">
-            <div class="relative w-14 h-14 flex-shrink-0 flex justify-center items-center mr-4">
-                <svg class="w-full h-full absolute top-0 left-0" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="42" fill="transparent" stroke="#f3f4f6" stroke-width="8"></circle>
-                    <circle id="progressRing" class="progress-ring__circle" cx="50" cy="50" r="42" fill="transparent" stroke="#3b82f6" stroke-width="8" stroke-linecap="round" stroke-dasharray="263.89" stroke-dashoffset="263.89"></circle>
-                </svg>
-                <span id="progressText" class="absolute text-xs font-bold text-gray-800">0%</span>
-            </div>
-            <div>
-                <div class="flex items-center space-x-2">
-                    <h2 class="text-base font-bold text-gray-900" id="progressStatusText">进行中</h2>
-                    <span id="gridSizeBadge" class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-semibold">4x4</span>
+    <div class="app-container">
+        
+        <div id="view-bingo" class="flex-1 flex flex-col w-full h-full">
+            <header class="pt-8 pb-4 px-6 flex justify-between items-end">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Daily Bingo</h1>
+                    <p id="bingoDateDisplay" class="text-xs text-gray-500 font-medium uppercase mt-1"></p>
                 </div>
-                <p class="text-[11px] text-gray-500 mt-1">连成任意直线、横线或对角线即达成。</p>
-            </div>
-        </section>
-
-        <!-- 【新增】状态评估模块 (Mood Tracking) -->
-        <section class="px-6 mb-5 flex space-x-3">
-            <button onclick="cycleMood('start')" class="flex-1 bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center justify-between transition btn-press">
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-sun text-gray-400 text-sm"></i>
-                    <span class="text-xs font-bold text-gray-600">晨间状态</span>
+                <div class="flex space-x-2">
+                    <button onclick="openBingoHistory()" class="btn-press w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200">
+                        <i class="fas fa-calendar-check"></i>
+                    </button>
+                    <button onclick="openBingoSettings()" class="btn-press w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200">
+                        <i class="fas fa-sliders-h"></i>
+                    </button>
                 </div>
-                <span id="moodStartIcon" class="text-lg text-gray-300"><i class="fas fa-minus-circle"></i></span>
-            </button>
-            <button onclick="cycleMood('end')" class="flex-1 bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center justify-between transition btn-press">
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-moon text-gray-400 text-sm"></i>
-                    <span class="text-xs font-bold text-gray-600">晚间复盘</span>
+            </header>
+
+            <section class="px-6 mb-4 flex items-center bg-white rounded-2xl mx-4 p-4 shadow-sm border border-gray-100">
+                <div class="relative w-14 h-14 flex-shrink-0 flex justify-center items-center mr-4">
+                    <svg class="w-full h-full absolute top-0 left-0" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="42" fill="transparent" stroke="#f3f4f6" stroke-width="8"></circle>
+                        <circle id="progressRing" class="progress-ring__circle" cx="50" cy="50" r="42" fill="transparent" stroke="#3b82f6" stroke-width="8" stroke-linecap="round" stroke-dasharray="263.89" stroke-dashoffset="263.89"></circle>
+                    </svg>
+                    <span id="progressText" class="absolute text-xs font-bold text-gray-800">0%</span>
                 </div>
-                <span id="moodEndIcon" class="text-lg text-gray-300"><i class="fas fa-minus-circle"></i></span>
-            </button>
-        </section>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h2 class="text-base font-bold text-gray-900" id="progressStatusText">进行中</h2>
+                        <span id="gridSizeBadge" class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-semibold">4x4</span>
+                    </div>
+                    <p class="text-[11px] text-gray-500 mt-1">连成任意直线或对角线即达成。</p>
+                </div>
+            </section>
 
-        <section class="bingo-grid flex-1" id="gridContainer"></section>
+            <section class="px-6 mb-5 flex space-x-3">
+                <button onclick="cycleMood('start')" class="flex-1 bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center justify-between transition btn-press">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-sun text-gray-400 text-sm"></i>
+                        <span class="text-xs font-bold text-gray-600">晨间状态</span>
+                    </div>
+                    <span id="moodStartIcon" class="text-lg text-gray-300"><i class="fas fa-minus-circle"></i></span>
+                </button>
+                <button onclick="cycleMood('end')" class="flex-1 bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center justify-between transition btn-press">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-moon text-gray-400 text-sm"></i>
+                        <span class="text-xs font-bold text-gray-600">晚间复盘</span>
+                    </div>
+                    <span id="moodEndIcon" class="text-lg text-gray-300"><i class="fas fa-minus-circle"></i></span>
+                </button>
+            </section>
 
-        <section class="px-6 py-6 mt-auto border-t border-gray-100 bg-white">
-            <div class="flex space-x-3">
-                <button onclick="shuffleGrid()" class="btn-press flex-1 bg-blue-50 text-blue-600 py-3 rounded-xl font-semibold text-sm flex justify-center items-center space-x-2 border border-blue-100">
-                    <i class="fas fa-random"></i><span>重新生成</span>
-                </button>
-                <button onclick="resetGridState()" class="btn-press flex-1 bg-gray-50 text-gray-600 py-3 rounded-xl font-semibold text-sm flex justify-center items-center space-x-2 border border-gray-200">
-                    <i class="fas fa-undo"></i><span>清空状态</span>
-                </button>
-            </div>
-        </section>
-    </div>
-
-    <!-- 历史记录日历模态框 -->
-    <div id="historyModal" class="modal-overlay fixed inset-0 flex items-center justify-center p-4">
-        <div class="modal-content bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden flex flex-col">
-            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                <h3 class="font-bold text-gray-800" id="calMonthDisplay">打卡记录</h3>
-                <button onclick="closeHistory()" class="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex justify-center items-center hover:bg-gray-300">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
+            <section class="bingo-grid flex-1" id="gridContainer"></section>
             
-            <div class="p-5">
-                <!-- 统计概览 -->
-                <div class="flex justify-around mb-5 bg-gray-50 rounded-xl p-3 border border-gray-100">
-                    <div class="text-center">
-                        <p class="text-[10px] text-gray-500 uppercase">总达成</p>
-                        <p class="text-xl font-bold text-yellow-600" id="statTotalBingo">0</p>
-                    </div>
-                    <div class="w-px bg-gray-200"></div>
-                    <div class="text-center">
-                        <p class="text-[10px] text-gray-500 uppercase">当月达成</p>
-                        <p class="text-xl font-bold text-gray-800" id="statMonthBingo">0</p>
-                    </div>
+            <section class="px-6 py-6 mt-auto border-t border-gray-100 bg-white">
+                <div class="flex space-x-3">
+                    <button onclick="shuffleGrid()" class="btn-press flex-1 bg-blue-50 text-blue-600 py-3 rounded-xl font-semibold text-sm flex justify-center items-center space-x-2 border border-blue-100">
+                        <i class="fas fa-random"></i><span>重新生成</span>
+                    </button>
+                    <button onclick="resetBingoGrid()" class="btn-press flex-1 bg-gray-50 text-gray-600 py-3 rounded-xl font-semibold text-sm flex justify-center items-center space-x-2 border border-gray-200">
+                        <i class="fas fa-undo"></i><span>清空状态</span>
+                    </button>
                 </div>
-
-                <div class="calendar-grid mb-2">
-                    <div class="cal-day-header">日</div><div class="cal-day-header">一</div><div class="cal-day-header">二</div>
-                    <div class="cal-day-header">三</div><div class="cal-day-header">四</div><div class="cal-day-header">五</div><div class="cal-day-header">六</div>
-                </div>
-                <div id="calendarContainer" class="calendar-grid"></div>
-                
-                <div class="mt-4 border-t border-gray-100 pt-3 flex flex-col space-y-2 text-[10px] text-gray-500">
-                    <div class="flex justify-between items-center px-2">
-                        <div class="flex space-x-3">
-                            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded bg-[#f3f4f6] inline-block mr-1"></span>无记录</span>
-                            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded bg-[#dbeafe] border border-[#bfdbfe] inline-block mr-1"></span>进行中</span>
-                            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded bg-[#fefce8] border border-[#facc15] inline-block mr-1"></span>Bingo</span>
-                        </div>
-                    </div>
-                    <div class="flex justify-between items-center px-2">
-                        <span class="text-gray-400">圆点标记: 晨间状态(左上) / 晚间复盘(右下)</span>
-                        <div class="flex space-x-2">
-                            <span class="text-green-500"><i class="fas fa-circle text-[8px]"></i> 佳</span>
-                            <span class="text-yellow-500"><i class="fas fa-circle text-[8px]"></i> 平</span>
-                            <span class="text-red-500"><i class="fas fa-circle text-[8px]"></i> 差</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            </section>
         </div>
-    </div>
 
-    <!-- 设置模态框 -->
-    <div id="settingsModal" class="modal-overlay fixed inset-0 flex items-center justify-center p-4">
-        <div class="modal-content bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                <h3 class="font-bold text-gray-800">系统设置</h3>
-                <button onclick="closeSettings()" class="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex justify-center items-center hover:bg-gray-300">
-                    <i class="fas fa-times"></i>
+        <div id="view-discipline" class="flex-1 flex flex-col w-full h-full hidden bg-slate-50">
+            <header class="pt-8 pb-4 px-6 flex justify-between items-center">
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight text-slate-900">SYSTEM CORE</h1>
+                    <p id="discDateDisplay" class="mono text-[10px] text-slate-400 mt-1 uppercase tracking-widest"></p>
+                </div>
+                <button onclick="openDiscSettings()" class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 btn-press">
+                    <i class="fas fa-cog"></i>
                 </button>
-            </div>
-            <div class="p-5 overflow-y-auto custom-scroll">
-                <div class="mb-5">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">选择矩阵难度</label>
-                    <div class="flex space-x-2" id="gridSizeSelector"></div>
+            </header>
+
+            <section class="px-6 mb-6">
+                <div class="flex items-center justify-between mb-2 px-1">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Execution Heatmap</span>
+                    <span id="streakCount" class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full uppercase border border-emerald-100">0 Streaks</span>
                 </div>
-                <div class="mb-5">
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="block text-sm font-semibold text-gray-700">我的任务库</label>
-                        <span id="taskCount" class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">共 0 项</span>
-                    </div>
-                    <div class="flex space-x-2 mb-3">
-                        <input type="text" id="newTaskInput" placeholder="输入新任务..." class="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                        <button onclick="addNewTask()" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-600 btn-press">添加</button>
-                    </div>
-                    <div id="taskLibraryList" class="space-y-2 border border-gray-100 rounded-lg p-2 bg-gray-50 min-h-[120px] max-h-[180px] overflow-y-auto custom-scroll"></div>
-                </div>
-                <div class="border-t border-gray-100 pt-4">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">数据管理</label>
-                    <div class="flex space-x-2">
-                        <button onclick="exportData()" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-xs font-semibold hover:bg-gray-200 btn-press"><i class="fas fa-file-export mr-1"></i>导出</button>
-                        <button onclick="document.getElementById('importFile').click()" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-xs font-semibold hover:bg-gray-200 btn-press"><i class="fas fa-file-import mr-1"></i>导入</button>
-                        <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
+                <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                    <div id="heatmapGrid" class="heatmap-container no-scrollbar"></div>
+                    <div class="flex justify-between items-center mt-2 px-1">
+                        <span class="text-[9px] text-slate-300 mono">12 Weeks</span>
+                        <div class="flex items-center space-x-1">
+                            <span class="text-[9px] text-slate-300 mr-1">Less</span>
+                            <div class="heatmap-cell"></div><div class="heatmap-cell level-1"></div><div class="heatmap-cell level-2"></div><div class="heatmap-cell level-3"></div><div class="heatmap-cell level-4"></div>
+                            <span class="text-[9px] text-slate-300 ml-1">More</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="p-4 border-t border-gray-100 bg-white">
-                <button onclick="applySettings()" class="w-full bg-gray-900 text-white py-3 rounded-xl font-bold text-sm btn-press">保存</button>
+            </section>
+
+            <section class="px-6 mb-6 flex-1 overflow-y-auto no-scrollbar">
+                <div class="flex items-center justify-between mb-3 px-1">
+                    <h2 class="text-sm font-bold text-slate-800" id="discTodayLabel">今日纪律程序</h2>
+                </div>
+                <div id="dashboardList" class="space-y-3"></div>
+            </section>
+
+            <section class="px-6 mb-4">
+                <div class="bg-white rounded-2xl p-3 border border-dashed border-slate-200">
+                    <input type="text" id="dailyNote" onchange="updateNote()" placeholder="如遇不可抗力，在此作客观归因..." class="w-full bg-transparent border-none text-xs text-slate-600 focus:ring-0 focus:outline-none placeholder:text-slate-300">
+                </div>
+            </section>
+        </div>
+
+        <nav class="fixed bottom-0 w-full max-w-[480px] bg-white border-t border-gray-100 flex justify-around items-center pb-safe z-40" style="padding-bottom: env(safe-area-inset-bottom);">
+            <button onclick="switchTab('bingo')" id="nav-bingo" class="flex-1 py-4 flex flex-col items-center text-blue-600 transition">
+                <i class="fas fa-th-large text-lg mb-1"></i>
+                <span class="text-[10px] font-bold">Bingo</span>
+            </button>
+            <button onclick="switchTab('discipline')" id="nav-discipline" class="flex-1 py-4 flex flex-col items-center text-gray-400 transition hover:text-gray-600">
+                <i class="fas fa-shield-alt text-lg mb-1"></i>
+                <span class="text-[10px] font-bold">纪律系统</span>
+            </button>
+        </nav>
+
+        <div id="bingoHistoryModal" class="modal-overlay fixed inset-0 flex items-center justify-center p-4">
+            <div class="modal-content bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden flex flex-col">
+                <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h3 class="font-bold text-gray-800" id="calMonthDisplay">打卡记录</h3>
+                    <button onclick="closeBingoHistory()" class="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex justify-center items-center hover:bg-gray-300"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="p-5">
+                    <div class="flex justify-around mb-5 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                        <div class="text-center"><p class="text-[10px] text-gray-500 uppercase">总达成</p><p class="text-xl font-bold text-yellow-600" id="statTotalBingo">0</p></div>
+                        <div class="w-px bg-gray-200"></div>
+                        <div class="text-center"><p class="text-[10px] text-gray-500 uppercase">当月达成</p><p class="text-xl font-bold text-gray-800" id="statMonthBingo">0</p></div>
+                    </div>
+                    <div class="calendar-grid mb-2">
+                        <div class="cal-day-header">日</div><div class="cal-day-header">一</div><div class="cal-day-header">二</div><div class="cal-day-header">三</div><div class="cal-day-header">四</div><div class="cal-day-header">五</div><div class="cal-day-header">六</div>
+                    </div>
+                    <div id="calendarContainer" class="calendar-grid"></div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div id="toast" class="toast-notification"></div>
+        <div id="bingoSettingsModal" class="modal-overlay fixed inset-0 flex items-center justify-center p-4">
+            <div class="modal-content bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h3 class="font-bold text-gray-800">Bingo 设置</h3>
+                    <button onclick="closeBingoSettings()" class="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex justify-center items-center hover:bg-gray-300"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="p-5 overflow-y-auto custom-scroll">
+                    <div class="mb-5">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">选择矩阵难度</label>
+                        <div class="flex space-x-2" id="gridSizeSelector"></div>
+                    </div>
+                    <div class="mb-5">
+                        <div class="flex justify-between items-center mb-2"><label class="block text-sm font-semibold text-gray-700">我的任务库</label><span id="taskCount" class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">共 0 项</span></div>
+                        <div class="flex space-x-2 mb-3">
+                            <input type="text" id="newTaskInput" placeholder="输入新任务..." class="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            <button onclick="addBingoTask()" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-600 btn-press">添加</button>
+                        </div>
+                        <div id="taskLibraryList" class="space-y-2 border border-gray-100 rounded-lg p-2 bg-gray-50 min-h-[120px] max-h-[180px] overflow-y-auto custom-scroll"></div>
+                    </div>
+                    <div class="border-t border-gray-100 pt-4">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">数据管理</label>
+                        <div class="flex space-x-2">
+                            <button onclick="exportData()" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-xs font-semibold hover:bg-gray-200 btn-press"><i class="fas fa-file-export mr-1"></i>导出</button>
+                            <button onclick="document.getElementById('importFile').click()" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-xs font-semibold hover:bg-gray-200 btn-press"><i class="fas fa-file-import mr-1"></i>导入</button>
+                            <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 border-t border-gray-100 bg-white">
+                    <button onclick="applyBingoSettings()" class="w-full bg-gray-900 text-white py-3 rounded-xl font-bold text-sm btn-press">应用更改</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="discSettingsModal" class="modal-overlay fixed inset-0 flex items-center justify-center p-4">
+            <div class="modal-content bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h3 class="font-bold text-gray-800">程序配置 (If-Then)</h3>
+                    <button onclick="closeDiscSettings()" class="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex justify-center items-center hover:bg-gray-300"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="p-5 overflow-y-auto custom-scroll space-y-4">
+                    <div id="settingsTaskList" class="space-y-4"></div>
+                    <button onclick="addNewTaskTemplate()" class="w-full py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 text-xs font-bold hover:bg-slate-50 transition btn-press">+ 添加纪律程序</button>
+                </div>
+                <div class="p-4 border-t border-gray-100 bg-white">
+                    <button onclick="closeDiscSettings()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold text-sm btn-press">保存并重启系统</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="toast" class="toast-notification"></div>
+    </div>
 
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-        }
-
-        const STORAGE_KEY = 'dailyBingoData_pwa';
-        const DEFAULT_TASKS = ["早睡", "阅读", "健身", "写日记", "冥想", "喝水", "不吃宵夜", "学外语", "整理房间", "拉伸", "做饭", "复盘", "看纪录片", "练字", "记账", "断舍离"];
-
-        // 预设三种状态评估标准
-        const MOOD_LEVELS = [
-            { val: null, icon: '<i class="fas fa-minus-circle"></i>', color: 'text-gray-300', dot: '' },
-            { val: 'good', icon: '<i class="fas fa-smile"></i>', color: 'text-green-500', dot: 'bg-green-500' },
-            { val: 'normal', icon: '<i class="fas fa-meh"></i>', color: 'text-yellow-500', dot: 'bg-yellow-500' },
-            { val: 'bad', icon: '<i class="fas fa-frown"></i>', color: 'text-red-500', dot: 'bg-red-500' }
-        ];
-
-        let appState = { 
-            gridSize: 4, 
-            taskLibrary: [...DEFAULT_TASKS], 
-            currentGridTasks: [], 
-            currentGridStates: [], 
-            hasBingoToday: false,
-            lastGeneratedDate: '', 
-            todayMood: { start: null, end: null }, // 新增：当日实时状态
-            history: {} 
-        };
-
-        const els = {
-            gridContainer: document.getElementById('gridContainer'),
-            progressRing: document.getElementById('progressRing'),
-            progressText: document.getElementById('progressText'),
-            progressStatusText: document.getElementById('progressStatusText'),
-            dateDisplay: document.getElementById('dateDisplay'),
-            gridSizeBadge: document.getElementById('gridSizeBadge'),
-            settingsModal: document.getElementById('settingsModal'),
-            historyModal: document.getElementById('historyModal'),
-            taskLibraryList: document.getElementById('taskLibraryList'),
-            newTaskInput: document.getElementById('newTaskInput'),
-            taskCount: document.getElementById('taskCount'),
-            gridSizeSelector: document.getElementById('gridSizeSelector'),
-            toast: document.getElementById('toast'),
-            calContainer: document.getElementById('calendarContainer'),
-            calMonthDisplay: document.getElementById('calMonthDisplay'),
-            statTotalBingo: document.getElementById('statTotalBingo'),
-            statMonthBingo: document.getElementById('statMonthBingo'),
-            moodStartIcon: document.getElementById('moodStartIcon'),
-            moodEndIcon: document.getElementById('moodEndIcon')
-        };
-
-        function getLocalTodayStr() {
-            const d = new Date();
-            const tzOffset = d.getTimezoneOffset() * 60000;
-            return new Date(d.getTime() - tzOffset).toISOString().split('T')[0];
-        }
-
-        let toastTimeout;
-        function showToast(message) {
-            els.toast.innerText = message; els.toast.classList.add('show');
-            clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => els.toast.classList.remove('show'), 2000);
-        }
-
-        function initApp() {
-            loadState(); 
-            renderDate();
-            
-            const todayStr = getLocalTodayStr();
-            
-            // 过零点自动重置
-            if (appState.lastGeneratedDate !== todayStr) {
-                generateNewGridData();
-            }
-
-            renderGrid(); 
-            updateMoodUI();
-            calculateBingoEngine(); // 顺带初始化 UI 并保存基础历史记录
-        }
-
-        function loadState() {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) try { appState = { ...appState, ...JSON.parse(saved) }; } catch (e) {}
-            // 兼容历史版本
-            if (!appState.history) appState.history = {}; 
-            if (!appState.todayMood) appState.todayMood = { start: null, end: null };
-        }
-
-        function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); }
-
-        // --- 【新增】状态切换与 UI ---
-        function cycleMood(type) {
-            vibrate(20);
-            let currentVal = appState.todayMood[type];
-            let currentIndex = MOOD_LEVELS.findIndex(m => m.val === currentVal);
-            let nextIndex = (currentIndex + 1) % MOOD_LEVELS.length;
-            
-            appState.todayMood[type] = MOOD_LEVELS[nextIndex].val;
-            
-            updateMoodUI();
-            syncHistoryData(); // 状态更新后立刻同步至历史记录
-        }
-
-        function updateMoodUI() {
-            const renderIcon = (type, elId) => {
-                const moodObj = MOOD_LEVELS.find(m => m.val === appState.todayMood[type]) || MOOD_LEVELS[0];
-                const el = document.getElementById(elId);
-                el.innerHTML = moodObj.icon;
-                el.className = `text-lg ${moodObj.color}`;
-            };
-            renderIcon('start', 'moodStartIcon');
-            renderIcon('end', 'moodEndIcon');
-        }
-
-        // 抽离同步历史记录的方法，以确保任务点击和状态更改都能实时触发记录
-        function syncHistoryData() {
-            const n = appState.gridSize;
-            const completedCount = appState.currentGridStates.filter(Boolean).length;
-            const percent = Math.floor((completedCount / (n * n)) * 100);
-            const todayStr = getLocalTodayStr();
-
-            // 如果今日有 BINGO 或者 进度为 100，修正 percent 为 100
-            const finalPercent = appState.hasBingoToday ? 100 : percent;
-
-            appState.history[todayStr] = {
-                percent: finalPercent,
-                isBingo: appState.hasBingoToday,
-                moodStart: appState.todayMood.start,
-                moodEnd: appState.todayMood.end
-            };
-            saveState();
-        }
-
-        function calculateBingoEngine() {
-            const n = appState.gridSize, states = appState.currentGridStates;
-            let isBingo = false, winningLines = [];
-            for (let r = 0; r < n; r++) winningLines.push(Array.from({length: n}, (_, i) => r * n + i));
-            for (let c = 0; c < n; c++) winningLines.push(Array.from({length: n}, (_, i) => i * n + c));
-            winningLines.push(Array.from({length: n}, (_, i) => i * n + i), Array.from({length: n}, (_, i) => i * n + (n - 1 - i)));
-            isBingo = winningLines.some(line => line.every(i => states[i]));
-            
-            let percent = Math.floor((states.filter(Boolean).length / (n * n)) * 100);
-            
-            if (isBingo) { 
-                percent = 100; 
-                if (!appState.hasBingoToday) { 
-                    appState.hasBingoToday = true; 
-                    triggerVictoryFX(); 
-                } 
-            } else {
-                appState.hasBingoToday = false;
-            }
-
-            syncHistoryData();
-            updateProgressUI(percent, isBingo); 
-        }
-
-        // --- 日历渲染逻辑 ---
-        function openHistory() { vibrate(20); renderCalendar(); els.historyModal.classList.add('show'); }
-        function closeHistory() { els.historyModal.classList.remove('show'); }
-
-        function renderCalendar() {
-            const now = new Date();
-            const year = now.getFullYear(), month = now.getMonth();
-            const todayStr = getLocalTodayStr();
-            
-            els.calMonthDisplay.innerText = `${year}年 ${month + 1}月 打卡记录`;
-
-            const firstDayOfMonth = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            
-            els.calContainer.innerHTML = '';
-            
-            for (let i = 0; i < firstDayOfMonth; i++) {
-                const emptyCell = document.createElement('div');
-                emptyCell.className = 'cal-cell cal-empty';
-                els.calContainer.appendChild(emptyCell);
-            }
-
-            let monthBingoCount = 0;
-
-            for (let i = 1; i <= daysInMonth; i++) {
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                const cell = document.createElement('div');
-                const record = appState.history[dateStr];
-                
-                let cellClass = 'cal-cell cal-no-data';
-                let innerHtml = `${i}`;
-
-                if (record) {
-                    if (record.isBingo) {
-                        cellClass = 'cal-cell cal-bingo';
-                        innerHtml = `${i}<i class="fas fa-star text-[8px] mt-0.5"></i>`;
-                        monthBingoCount++;
-                    } else if (record.percent > 0 || record.moodStart || record.moodEnd) {
-                        cellClass = 'cal-cell cal-partial';
-                    }
-
-                    // 【新增】绘制小圆点代表早晚状态
-                    const getDotColor = (val) => (MOOD_LEVELS.find(m => m.val === val) || {}).dot || '';
-                    if (record.moodStart) innerHtml += `<div class="mood-dot-start ${getDotColor(record.moodStart)}"></div>`;
-                    if (record.moodEnd) innerHtml += `<div class="mood-dot-end ${getDotColor(record.moodEnd)}"></div>`;
-                }
-
-                if (dateStr === todayStr) innerHtml += `<span class="cal-today-indicator"></span>`;
-
-                cell.className = cellClass;
-                cell.innerHTML = innerHtml;
-                els.calContainer.appendChild(cell);
-            }
-
-            let totalBingoCount = Object.values(appState.history).filter(r => r.isBingo).length;
-            els.statTotalBingo.innerText = totalBingoCount;
-            els.statMonthBingo.innerText = monthBingoCount;
-        }
-
-        // --- 基础渲染 ---
-        function renderDate() { els.dateDisplay.innerText = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }).replace(/\//g, ' · '); }
-
-        function generateNewGridData() {
-            let total = appState.gridSize ** 2, pool = [...appState.taskLibrary];
-            while (pool.length < total) pool.push(`任务 ${pool.length + 1}`);
-            pool.sort(() => Math.random() - 0.5);
-            appState.currentGridTasks = pool.slice(0, total);
-            appState.currentGridStates = new Array(total).fill(false);
-            appState.hasBingoToday = false;
-            // 清理当日实时状态
-            appState.todayMood = { start: null, end: null };
-            appState.lastGeneratedDate = getLocalTodayStr(); 
-            
-            updateMoodUI();
-            saveState();
-        }
-
-        function renderGrid() {
-            const n = appState.gridSize;
-            els.gridSizeBadge.innerText = `${n}x${n}`;
-            els.gridContainer.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
-            els.gridContainer.innerHTML = '';
-            appState.currentGridTasks.forEach((task, index) => {
-                const item = document.createElement('div');
-                item.className = `grid-item ${appState.currentGridStates[index] ? 'active' : ''}`;
-                item.style.fontSize = n >= 5 ? '0.75rem' : '0.85rem';
-                item.innerText = task;
-                item.addEventListener('click', () => {
-                    appState.currentGridStates[index] = !appState.currentGridStates[index];
-                    appState.currentGridStates[index] ? (item.classList.add('active'), vibrate(30)) : (item.classList.remove('active'), vibrate(20));
-                    calculateBingoEngine();
-                });
-                els.gridContainer.appendChild(item);
-            });
-        }
-
-        function updateProgressUI(percent, isBingo) {
-            els.progressText.innerText = `${percent}%`;
-            els.progressRing.style.strokeDashoffset = 263.89 - (percent / 100) * 263.89;
-            els.progressRing.setAttribute('stroke', isBingo ? '#eab308' : '#3b82f6');
-            els.progressText.style.color = isBingo ? '#ca8a04' : '#1f2937';
-            els.progressStatusText.innerText = isBingo ? "BINGO! 任务达成" : "打卡进行中";
-            els.progressStatusText.className = isBingo ? "text-base font-bold text-yellow-600" : "text-base font-bold text-gray-900";
-        }
-
-        // --- 设置与辅助方法 (保持不变) ---
-        let tempGridSize = appState.gridSize;
-        function openSettings() { vibrate(20); tempGridSize = appState.gridSize; renderSettingsPanel(); els.settingsModal.classList.add('show'); }
-        function closeSettings() { els.settingsModal.classList.remove('show'); }
-
-        function renderSettingsPanel() {
-            els.gridSizeSelector.innerHTML = '';
-            [3, 4, 5, 6].forEach(size => {
-                const btn = document.createElement('button');
-                btn.className = `flex-1 py-2 rounded-lg text-sm font-semibold transition btn-press ${size === tempGridSize ? 'bg-blue-500 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`;
-                btn.innerText = `${size}x${size}`;
-                btn.onclick = () => { tempGridSize = size; vibrate(10); renderSettingsPanel(); };
-                els.gridSizeSelector.appendChild(btn);
-            });
-            els.taskCount.innerText = `共 ${appState.taskLibrary.length} 项`;
-            els.taskLibraryList.innerHTML = '';
-            appState.taskLibrary.forEach((task, index) => {
-                const div = document.createElement('div');
-                div.className = 'flex justify-between items-center bg-white p-2 rounded border border-gray-100 shadow-sm';
-                div.innerHTML = `<span class="text-sm text-gray-700 truncate mr-2">${task}</span><button onclick="removeTaskFromLib(${index})" class="text-gray-400 hover:text-red-500 p-1"><i class="fas fa-trash-alt text-xs"></i></button>`;
-                els.taskLibraryList.appendChild(div);
-            });
-        }
-
-        function addNewTask() {
-            const val = els.newTaskInput.value.trim();
-            if (!val) return;
-            if (appState.taskLibrary.includes(val)) return showToast("任务已存在");
-            appState.taskLibrary.unshift(val); els.newTaskInput.value = ''; vibrate(20); renderSettingsPanel(); saveState();
-        }
-
-        function removeTaskFromLib(i) { appState.taskLibrary.splice(i, 1); vibrate(20); renderSettingsPanel(); saveState(); }
-        function applySettings() { vibrate([50, 50, 50]); appState.gridSize = tempGridSize; generateNewGridData(); renderGrid(); calculateBingoEngine(); closeSettings(); }
-        function shuffleGrid() { vibrate(40); els.gridContainer.style.opacity = '0'; setTimeout(() => { generateNewGridData(); renderGrid(); calculateBingoEngine(); els.gridContainer.style.opacity = '1'; showToast("已重新生成"); }, 200); }
-        function resetGridState() { vibrate(30); appState.currentGridStates.fill(false); appState.hasBingoToday = false; Array.from(els.gridContainer.children).forEach(el => el.classList.remove('active')); calculateBingoEngine(); showToast("状态已清空"); }
-        function vibrate(p) { if (navigator.vibrate) navigator.vibrate(p); }
+        // ==================== 全局通用 ====================
+        const getTodayDateStr = () => new Date().toLocaleDateString('zh-CN', {timeZone: 'Asia/Shanghai'}).replace(/\//g, '-');
         
-        function triggerVictoryFX() {
-            vibrate([100, 50, 200, 50, 400]); const end = Date.now() + 2000, colors = ['#eab308', '#3b82f6', '#ef4444', '#10b981'];
-            (function frame() {
-                confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0, y: 0.8 }, colors });
-                confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1, y: 0.8 }, colors });
-                if (Date.now() < end) requestAnimationFrame(frame);
-            }());
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message; toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+        function vibrate(p) { if (navigator.vibrate) navigator.vibrate(p); }
+
+        function switchTab(tab) {
+            vibrate(10);
+            const viewBingo = document.getElementById('view-bingo');
+            const viewDisc = document.getElementById('view-discipline');
+            const navBingo = document.getElementById('nav-bingo');
+            const navDisc = document.getElementById('nav-discipline');
+
+            if (tab === 'bingo') {
+                viewBingo.classList.remove('hidden'); viewDisc.classList.add('hidden');
+                navBingo.className = "flex-1 py-4 flex flex-col items-center text-blue-600 transition";
+                navDisc.className = "flex-1 py-4 flex flex-col items-center text-gray-400 transition hover:text-gray-600";
+            } else {
+                viewBingo.classList.add('hidden'); viewDisc.classList.remove('hidden');
+                navBingo.className = "flex-1 py-4 flex flex-col items-center text-gray-400 transition hover:text-gray-600";
+                navDisc.className = "flex-1 py-4 flex flex-col items-center text-slate-800 transition";
+            }
         }
 
         function exportData() {
-            const blob = new Blob([JSON.stringify(appState)], { type: "application/json" });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Bingo_${getLocalTodayStr()}.json`;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a); showToast("已导出");
+            const exportObj = { bingo: bingoState, discipline: discState };
+            const blob = new Blob([JSON.stringify(exportObj)], { type: "application/json" });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `System_Backup_${getTodayDateStr()}.json`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); showToast("已导出全系统数据");
         }
         function importData(e) {
             const file = e.target.files[0]; if (!file) return;
             const r = new FileReader();
-            r.onload = ev => { try { appState = { ...appState, ...JSON.parse(ev.target.result) }; saveState(); initApp(); showToast("恢复成功"); } catch (err) { showToast("解析失败"); } };
+            r.onload = ev => { 
+                try { 
+                    const data = JSON.parse(ev.target.result); 
+                    if(data.bingo) { bingoState = { ...bingoState, ...data.bingo }; saveBingo(); }
+                    else { bingoState = { ...bingoState, ...data }; saveBingo(); }
+                    if(data.discipline) { discState = { ...discState, ...data.discipline }; saveDisc(); }
+                    window.location.reload(); 
+                } catch (err) { showToast("解析失败"); } 
+            };
             r.readAsText(file); e.target.value = '';
         }
 
-        window.addEventListener('DOMContentLoaded', initApp);
-        els.newTaskInput.addEventListener('keypress', e => e.key === 'Enter' && addNewTask());
+        // ==================== BINGO 系统 (保留原有逻辑) ====================
+        const BINGO_KEY = 'dailyBingoData_pwa';
+        const DEFAULT_BINGO_TASKS = ["早睡", "阅读", "看盘复盘", "整理房间", "冥想", "喝水", "拉伸", "断舍离", "看纪录片"];
+        const MOODS = [{ val: null, icon: '<i class="fas fa-minus-circle"></i>', color: 'text-gray-300', dot: '' }, { val: 'good', icon: '<i class="fas fa-smile"></i>', color: 'text-green-500', dot: 'bg-green-500' }, { val: 'normal', icon: '<i class="fas fa-meh"></i>', color: 'text-yellow-500', dot: 'bg-yellow-500' }, { val: 'bad', icon: '<i class="fas fa-frown"></i>', color: 'text-red-500', dot: 'bg-red-500' }];
+        let bingoState = { gridSize: 4, taskLibrary: [...DEFAULT_BINGO_TASKS], currentTasks: [], currentStates: [], hasBingo: false, lastDate: '', todayMood: { start: null, end: null }, history: {} };
+        let tempGridSize = 4;
+
+        function initBingo() {
+            const saved = localStorage.getItem(BINGO_KEY); if (saved) bingoState = { ...bingoState, ...JSON.parse(saved) };
+            if (!bingoState.todayMood) bingoState.todayMood = { start: null, end: null }; if (!bingoState.history) bingoState.history = {};
+            document.getElementById('bingoDateDisplay').innerText = new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', weekday: 'short' }).replace(/\//g, '·');
+            document.getElementById('gridSizeBadge').innerText = `${bingoState.gridSize}x${bingoState.gridSize}`;
+            if (bingoState.lastDate !== getTodayDateStr()) generateBingoGrid();
+            else { renderBingoGrid(); updateBingoProgress(); updateMoodUI(); }
+        }
+        function saveBingo() { localStorage.setItem(BINGO_KEY, JSON.stringify(bingoState)); }
+        function generateBingoGrid() {
+            let total = bingoState.gridSize ** 2; let pool = [...bingoState.taskLibrary].sort(() => Math.random() - 0.5);
+            while (pool.length < total) pool.push("附加任务");
+            bingoState.currentTasks = pool.slice(0, total); bingoState.currentStates = new Array(total).fill(false);
+            bingoState.hasBingo = false; bingoState.lastDate = getTodayDateStr(); bingoState.todayMood = { start: null, end: null };
+            document.getElementById('gridSizeBadge').innerText = `${bingoState.gridSize}x${bingoState.gridSize}`;
+            saveBingo(); renderBingoGrid(); updateBingoProgress(); updateMoodUI();
+        }
+        function renderBingoGrid() {
+            const n = bingoState.gridSize; const container = document.getElementById('gridContainer');
+            container.style.gridTemplateColumns = `repeat(${n}, 1fr)`; container.innerHTML = '';
+            bingoState.currentTasks.forEach((task, i) => {
+                const item = document.createElement('div'); item.className = `grid-item ${bingoState.currentStates[i] ? 'active' : ''}`;
+                item.style.fontSize = n >= 5 ? '0.75rem' : '0.85rem'; item.innerText = task;
+                item.onclick = () => { bingoState.currentStates[i] = !bingoState.currentStates[i]; vibrate(bingoState.currentStates[i] ? 30 : 20); checkBingoWin(); renderBingoGrid(); };
+                container.appendChild(item);
+            });
+        }
+        function checkBingoWin() {
+            const n = bingoState.gridSize, s = bingoState.currentStates; let lines = [];
+            for (let r=0; r<n; r++) lines.push(Array.from({length:n}, (_,i)=>r*n+i));
+            for (let c=0; c<n; c++) lines.push(Array.from({length:n}, (_,i)=>i*n+c));
+            lines.push(Array.from({length:n}, (_,i)=>i*n+i), Array.from({length:n}, (_,i)=>i*n+(n-1-i)));
+            let isWin = lines.some(line => line.every(i => s[i]));
+            if (isWin && !bingoState.hasBingo) { triggerConfetti(); bingoState.hasBingo = true; }
+            if (!isWin) bingoState.hasBingo = false;
+            updateBingoHistory(); updateBingoProgress();
+        }
+        function updateBingoHistory() {
+            const n = bingoState.gridSize; const completedCount = bingoState.currentStates.filter(Boolean).length;
+            const percent = Math.floor((completedCount / (n * n)) * 100); const todayStr = getTodayDateStr();
+            bingoState.history[todayStr] = { percent: bingoState.hasBingo ? 100 : percent, isBingo: bingoState.hasBingo, moodStart: bingoState.todayMood.start, moodEnd: bingoState.todayMood.end };
+            saveBingo();
+        }
+        function updateBingoProgress() {
+            const p = Math.floor((bingoState.currentStates.filter(Boolean).length / (bingoState.gridSize**2)) * 100);
+            const ring = document.getElementById('progressRing'), text = document.getElementById('progressText'), stat = document.getElementById('progressStatusText');
+            ring.style.strokeDashoffset = 263.89 - ((bingoState.hasBingo ? 100 : p) / 100) * 263.89; ring.setAttribute('stroke', bingoState.hasBingo ? '#eab308' : '#3b82f6');
+            text.innerText = `${bingoState.hasBingo ? 100 : p}%`; text.style.color = bingoState.hasBingo ? '#ca8a04' : '#1f2937';
+            stat.innerText = bingoState.hasBingo ? "BINGO! 任务达成" : "打卡进行中"; stat.className = bingoState.hasBingo ? "text-base font-bold text-yellow-600" : "text-base font-bold text-gray-900";
+        }
+        function shuffleGrid() { vibrate(40); generateBingoGrid(); showToast("已重新生成"); }
+        function resetBingoGrid() { vibrate(30); bingoState.currentStates.fill(false); bingoState.hasBingo = false; checkBingoWin(); renderBingoGrid(); showToast("状态已清空"); }
+        function cycleMood(type) { vibrate(20); let idx = MOODS.findIndex(m => m.val === bingoState.todayMood[type]); bingoState.todayMood[type] = MOODS[(idx + 1) % MOODS.length].val; updateBingoHistory(); updateMoodUI(); }
+        function updateMoodUI() { ['start', 'end'].forEach(type => { const mood = MOODS.find(m => m.val === bingoState.todayMood[type]) || MOODS[0]; const el = document.getElementById(type === 'start' ? 'moodStartIcon' : 'moodEndIcon'); el.innerHTML = mood.icon; el.className = `text-lg ${mood.color}`; }); }
+        function triggerConfetti() { vibrate([100,50,200]); confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } }); }
+        function openBingoHistory() { vibrate(20); renderBingoCalendar(); document.getElementById('bingoHistoryModal').classList.add('show'); }
+        function closeBingoHistory() { document.getElementById('bingoHistoryModal').classList.remove('show'); }
+        function renderBingoCalendar() {
+            const now = new Date(); const year = now.getFullYear(), month = now.getMonth(); const todayStr = getTodayDateStr();
+            document.getElementById('calMonthDisplay').innerText = `${year}年 ${month + 1}月 打卡记录`;
+            const firstDayOfMonth = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const calContainer = document.getElementById('calendarContainer'); calContainer.innerHTML = '';
+            for (let i = 0; i < firstDayOfMonth; i++) { const emptyCell = document.createElement('div'); emptyCell.className = 'cal-cell cal-empty'; calContainer.appendChild(emptyCell); }
+            let monthBingoCount = 0;
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const cell = document.createElement('div'); const record = bingoState.history[dateStr];
+                let cellClass = 'cal-cell cal-no-data'; let innerHtml = `${i}`;
+                if (record) {
+                    if (record.isBingo) { cellClass = 'cal-cell cal-bingo'; innerHtml = `${i}<i class="fas fa-star text-[8px] mt-0.5"></i>`; monthBingoCount++; }
+                    else if (record.percent > 0 || record.moodStart || record.moodEnd) { cellClass = 'cal-cell cal-partial'; }
+                    const getDotColor = (val) => (MOODS.find(m => m.val === val) || {}).dot || '';
+                    if (record.moodStart) innerHtml += `<div class="mood-dot-start ${getDotColor(record.moodStart)}"></div>`;
+                    if (record.moodEnd) innerHtml += `<div class="mood-dot-end ${getDotColor(record.moodEnd)}"></div>`;
+                }
+                if (dateStr === todayStr) innerHtml += `<span class="cal-today-indicator"></span>`;
+                cell.className = cellClass; cell.innerHTML = innerHtml; calContainer.appendChild(cell);
+            }
+            document.getElementById('statTotalBingo').innerText = Object.values(bingoState.history).filter(r => r.isBingo).length;
+            document.getElementById('statMonthBingo').innerText = monthBingoCount;
+        }
+        function openBingoSettings() { vibrate(20); tempGridSize = bingoState.gridSize; renderBingoSettingsPanel(); document.getElementById('bingoSettingsModal').classList.add('show'); }
+        function closeBingoSettings() { document.getElementById('bingoSettingsModal').classList.remove('show'); }
+        function renderBingoSettingsPanel() {
+            const sizeSelector = document.getElementById('gridSizeSelector'); sizeSelector.innerHTML = '';
+            [3, 4, 5, 6].forEach(size => {
+                const btn = document.createElement('button'); btn.className = `flex-1 py-2 rounded-lg text-sm font-semibold transition btn-press ${size === tempGridSize ? 'bg-blue-500 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`;
+                btn.innerText = `${size}x${size}`; btn.onclick = () => { tempGridSize = size; vibrate(10); renderBingoSettingsPanel(); }; sizeSelector.appendChild(btn);
+            });
+            document.getElementById('taskCount').innerText = `共 ${bingoState.taskLibrary.length} 项`;
+            const list = document.getElementById('taskLibraryList'); list.innerHTML = '';
+            bingoState.taskLibrary.forEach((task, index) => {
+                const div = document.createElement('div'); div.className = 'flex justify-between items-center bg-white p-2 rounded border border-gray-100 shadow-sm';
+                div.innerHTML = `<span class="text-sm text-gray-700 truncate mr-2">${task}</span><button onclick="removeBingoTask(${index})" class="text-gray-400 hover:text-red-500 p-1"><i class="fas fa-trash-alt text-xs"></i></button>`;
+                list.appendChild(div);
+            });
+        }
+        function addBingoTask() { const input = document.getElementById('newTaskInput'); const val = input.value.trim(); if (!val) return; if (bingoState.taskLibrary.includes(val)) return showToast("任务已存在"); bingoState.taskLibrary.unshift(val); input.value = ''; vibrate(20); renderBingoSettingsPanel(); saveBingo(); }
+        function removeBingoTask(i) { bingoState.taskLibrary.splice(i, 1); vibrate(20); renderBingoSettingsPanel(); saveBingo(); }
+        function applyBingoSettings() { vibrate([50, 50]); bingoState.gridSize = tempGridSize; generateBingoGrid(); closeBingoSettings(); showToast("设置已应用"); }
+
+
+        // ==================== 纪律系统 (DISCIPLINE) 调度更新版 ====================
+        const DISC_KEY = 'discipline_system_data';
+        
+        // 新增：默认提供 schedule 属性，表示周日(0)到周六(6)
+        const DEFAULT_DISC_TASKS = [
+            { id: 't1', name: "进食比例", if: "开始吃正餐", then: "按 1/2蔬菜、1/4蛋白质、1/4碳水装盘并顺序吃完", schedule: [0,1,2,3,4,5,6] },
+            { id: 't2', name: "液体规则", if: "口渴", then: "只喝水、茶或黑咖啡", schedule: [0,1,2,3,4,5,6] },
+            { id: 't3', name: "有氧心率", if: "做有氧运动", then: "保持 Zone 2 心率持续 >40 分钟", schedule: [1,3,5] } // 示例：仅一三五触发
+        ];
+
+        let discState = { tasks: DEFAULT_DISC_TASKS, logs: {}, notes: {} };
+
+        // 核心调度器：判断某任务在指定日期是否需要执行
+        function isTaskActiveOnDate(task, dateObj) {
+            if (!task.schedule) return true; // 向后兼容旧数据
+            const dayOfWeek = dateObj.getDay(); // 0(周日) - 6(周六)
+            return task.schedule.includes(dayOfWeek);
+        }
+
+        function initDiscipline() {
+            const saved = localStorage.getItem(DISC_KEY);
+            if (saved) discState = JSON.parse(saved);
+            
+            // 数据迁移兼容处理：为旧数据补充 schedule 字段
+            discState.tasks.forEach(t => { if(!t.schedule) t.schedule = [0,1,2,3,4,5,6]; });
+
+            document.getElementById('discDateDisplay').innerText = new Date().toDateString();
+            document.getElementById('dailyNote').value = discState.notes[getTodayDateStr()] || '';
+            
+            renderDiscDashboard(); 
+            renderHeatmap();
+        }
+        function saveDisc() { localStorage.setItem(DISC_KEY, JSON.stringify(discState)); }
+
+        function renderDiscDashboard() {
+            const container = document.getElementById('dashboardList');
+            const todayStr = getTodayDateStr(); 
+            const todayObj = new Date();
+            const todayLogs = discState.logs[todayStr] || {};
+            
+            // 过滤：只保留今天需要执行的任务
+            const activeTasks = discState.tasks.filter(t => isTaskActiveOnDate(t, todayObj));
+            
+            document.getElementById('discTodayLabel').innerText = `今日必做程序 (${activeTasks.length})`;
+
+            if (activeTasks.length === 0) {
+                container.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs font-mono">今日为系统调整日<br>无需执行任何核心纪律</div>`;
+                return;
+            }
+
+            container.innerHTML = activeTasks.map(task => `
+                <div class="task-card bg-white p-4 rounded-xl flex items-center justify-between" onclick="toggleDiscTask('${task.id}')">
+                    <div class="flex-1 pr-3">
+                        <h4 class="text-xs font-black text-slate-800 mb-1 tracking-wide">${task.name}</h4>
+                        <div class="text-[10px] leading-snug">
+                            <span class="text-slate-400 font-bold">IF:</span> <span class="text-slate-500">${task.if}</span><br>
+                            <span class="text-blue-500 font-bold">THEN:</span> <span class="text-slate-700 font-medium">${task.then}</span>
+                        </div>
+                    </div>
+                    <div class="checkbox-custom ${todayLogs[task.id] ? 'checked' : ''}">${todayLogs[task.id] ? '<i class="fas fa-check text-xs"></i>' : ''}</div>
+                </div>
+            `).join('');
+        }
+
+        function toggleDiscTask(id) {
+            const today = getTodayDateStr();
+            if (!discState.logs[today]) discState.logs[today] = {};
+            discState.logs[today][id] = !discState.logs[today][id];
+            vibrate(discState.logs[today][id] ? 30 : 10);
+            saveDisc(); renderDiscDashboard(); renderHeatmap();
+        }
+
+        function updateNote() { discState.notes[getTodayDateStr()] = document.getElementById('dailyNote').value; saveDisc(); }
+
+        // 热力图重构：动态核对历史日期的必做任务数
+        function renderHeatmap() {
+            const grid = document.getElementById('heatmapGrid'); grid.innerHTML = '';
+            let streak = 0; let streakBroken = false;
+            
+            for (let i = 83; i >= 0; i--) { // 过去12周
+                const d = new Date(); d.setDate(new Date().getDate() - i);
+                const key = d.toLocaleDateString('zh-CN', {timeZone: 'Asia/Shanghai'}).replace(/\//g, '-');
+                const log = discState.logs[key] || {};
+                
+                // 找出"那天"需要执行的任务
+                const requiredTasks = discState.tasks.filter(t => isTaskActiveOnDate(t, d));
+                const totalRequired = requiredTasks.length;
+                
+                let completedCount = 0;
+                requiredTasks.forEach(t => { if(log[t.id]) completedCount++; });
+
+                let ratio = 1; // 默认 100%，如果当天无需任务（合规休息），则保持满绿，不破坏 Streak
+                if (totalRequired > 0) {
+                    ratio = completedCount / totalRequired;
+                }
+                
+                let level = '';
+                if (totalRequired === 0) level = 'level-4'; // 计划内休息，判定为完美执行
+                else if (ratio > 0 && ratio <= 0.3) level = 'level-1';
+                else if (ratio > 0.3 && ratio <= 0.6) level = 'level-2';
+                else if (ratio > 0.6 && ratio < 1) level = 'level-3';
+                else if (ratio === 1) level = 'level-4';
+
+                // 计算 Streaks
+                if (ratio === 1 && !streakBroken) streak++;
+                else if (i > 0) { streak = 0; if (ratio < 1) streakBroken = true; }
+
+                const cell = document.createElement('div'); 
+                cell.className = `heatmap-cell ${level}`;
+                // 增加 Title 以便桌面端排查记录
+                cell.title = `${key}: ${completedCount}/${totalRequired} ${totalRequired === 0 ? '(休)' : ''}`;
+                grid.appendChild(cell);
+            }
+            document.getElementById('streakCount').innerText = `${streak} Streaks`;
+            grid.scrollLeft = grid.scrollWidth;
+        }
+
+        // --- 纪律设置更新（增加周日历触控排期） ---
+        function openDiscSettings() { vibrate(10); renderDiscSettings(); document.getElementById('discSettingsModal').classList.add('show'); }
+        function closeDiscSettings() { document.getElementById('discSettingsModal').classList.remove('show'); renderDiscDashboard(); renderHeatmap(); }
+        
+        function renderDiscSettings() {
+            const list = document.getElementById('settingsTaskList');
+            const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+
+            list.innerHTML = discState.tasks.map((t, i) => {
+                const sched = t.schedule || [0,1,2,3,4,5,6];
+                
+                // 生成星期切换按钮
+                const dayButtons = dayNames.map((dName, dIdx) => `
+                    <button onclick="toggleDiscSchedule(${i}, ${dIdx})" class="w-6 h-6 rounded-full text-[10px] font-bold transition flex items-center justify-center ${sched.includes(dIdx) ? 'bg-blue-500 text-white shadow-sm' : 'bg-slate-100 text-slate-400'}">${dName}</button>
+                `).join('');
+
+                return `
+                <div class="p-3 bg-white rounded-xl relative border border-slate-100 shadow-sm">
+                    <input type="text" value="${t.name}" onchange="updateDiscTask(${i}, 'name', this.value)" class="w-[85%] bg-transparent border-none font-black text-xs p-0 mb-2 text-slate-800 focus:ring-0 focus:outline-none placeholder:text-slate-300" placeholder="程序名称...">
+                    <div class="flex text-[10px] mt-1 items-center"><span class="text-slate-400 font-bold w-10">IF:</span><input type="text" value="${t.if}" onchange="updateDiscTask(${i}, 'if', this.value)" class="flex-1 bg-transparent border-none p-0 text-slate-600 focus:ring-0 focus:outline-none placeholder:text-slate-300" placeholder="触发条件..."></div>
+                    <div class="flex text-[10px] mt-1 items-center"><span class="text-blue-500 font-bold w-10">THEN:</span><input type="text" value="${t.then}" onchange="updateDiscTask(${i}, 'then', this.value)" class="flex-1 bg-transparent border-none p-0 text-slate-600 focus:ring-0 focus:outline-none placeholder:text-slate-300" placeholder="必须执行的客观动作..."></div>
+                    
+                    <div class="mt-3 pt-3 border-t border-slate-50 flex justify-between items-center">
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Schedule</span>
+                        <div class="flex space-x-1">${dayButtons}</div>
+                    </div>
+
+                    <button onclick="removeDiscTask(${i})" class="absolute top-3 right-3 text-slate-300 hover:text-red-400 transition"><i class="fas fa-trash text-sm"></i></button>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // 切换任务的星期调度
+        function toggleDiscSchedule(taskIdx, dayIdx) {
+            vibrate(10);
+            let sched = discState.tasks[taskIdx].schedule || [0,1,2,3,4,5,6];
+            if (sched.includes(dayIdx)) {
+                sched = sched.filter(d => d !== dayIdx);
+            } else {
+                sched.push(dayIdx);
+            }
+            discState.tasks[taskIdx].schedule = sched;
+            saveDisc();
+            renderDiscSettings(); // 局部刷新 UI
+        }
+
+        function updateDiscTask(idx, field, val) { discState.tasks[idx][field] = val; saveDisc(); }
+        function addNewTaskTemplate() { discState.tasks.push({ id: 't'+Date.now(), name: "新纪律程序", if: "", then: "", schedule: [0,1,2,3,4,5,6] }); saveDisc(); renderDiscSettings(); }
+        function removeDiscTask(idx) { discState.tasks.splice(idx, 1); saveDisc(); renderDiscSettings(); }
+
+        // ==================== 启动 ====================
+        window.addEventListener('DOMContentLoaded', () => {
+            initBingo();
+            initDiscipline();
+            document.getElementById('newTaskInput').addEventListener('keypress', e => e.key === 'Enter' && addBingoTask());
+        });
     </script>
 </body>
 </html>
