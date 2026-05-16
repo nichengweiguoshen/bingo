@@ -376,16 +376,26 @@
         function triggerConfetti() { vibrate([100,50,200]); confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } }); }
         function openBingoHistory() { vibrate(20); renderBingoCalendar(); document.getElementById('bingoHistoryModal').classList.add('show'); }
         function closeBingoHistory() { document.getElementById('bingoHistoryModal').classList.remove('show'); }
-        function renderBingoCalendar() {
+function renderBingoCalendar() {
             const now = new Date(); const year = now.getFullYear(), month = now.getMonth(); const todayStr = getTodayDateStr();
             document.getElementById('calMonthDisplay').innerText = `${year}年 ${month + 1}月 打卡记录`;
             const firstDayOfMonth = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate();
             const calContainer = document.getElementById('calendarContainer'); calContainer.innerHTML = '';
-            for (let i = 0; i < firstDayOfMonth; i++) { const emptyCell = document.createElement('div'); emptyCell.className = 'cal-cell cal-empty'; calContainer.appendChild(emptyCell); }
+            
+            for (let i = 0; i < firstDayOfMonth; i++) { 
+                const emptyCell = document.createElement('div'); emptyCell.className = 'cal-cell cal-empty'; calContainer.appendChild(emptyCell); 
+            }
+            
             let monthBingoCount = 0;
             for (let i = 1; i <= daysInMonth; i++) {
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                const cell = document.createElement('div'); const record = bingoState.history[dateStr];
+                // 修复核心：同时生成带0和不带0的日期字符串，以兼容不同设备的本地化输出
+                const dateStrPadded = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const dateStrUnpadded = `${year}-${month + 1}-${i}`;
+                
+                const cell = document.createElement('div'); 
+                // 同时去字典里查这两种 Key
+                const record = bingoState.history[dateStrPadded] || bingoState.history[dateStrUnpadded];
+                
                 let cellClass = 'cal-cell cal-no-data'; let innerHtml = `${i}`;
                 if (record) {
                     if (record.isBingo) { cellClass = 'cal-cell cal-bingo'; innerHtml = `${i}<i class="fas fa-star text-[8px] mt-0.5"></i>`; monthBingoCount++; }
@@ -394,7 +404,12 @@
                     if (record.moodStart) innerHtml += `<div class="mood-dot-start ${getDotColor(record.moodStart)}"></div>`;
                     if (record.moodEnd) innerHtml += `<div class="mood-dot-end ${getDotColor(record.moodEnd)}"></div>`;
                 }
-                if (dateStr === todayStr) innerHtml += `<span class="cal-today-indicator"></span>`;
+                
+                // “今天”的红点指示器也需要兼容两种格式
+                if (dateStrPadded === todayStr || dateStrUnpadded === todayStr) {
+                    innerHtml += `<span class="cal-today-indicator"></span>`;
+                }
+                
                 cell.className = cellClass; cell.innerHTML = innerHtml; calContainer.appendChild(cell);
             }
             document.getElementById('statTotalBingo').innerText = Object.values(bingoState.history).filter(r => r.isBingo).length;
