@@ -157,6 +157,9 @@
         }
         const HAPTIC = {
             tap: 12,
+            cellComplete: [16, 18, 26],
+            lineTwo: [22, 24, 36],
+            lineThree: [28, 28, 42, 32, 55],
             success: [25, 30, 45],
             warning: [50, 40, 50],
             complete: [35, 25, 70],
@@ -354,7 +357,7 @@
                     bingoState.lastCompletedIndex = null;
                     const animatedCell = container.querySelector(`[data-index="${animatedIndex}"]`);
                     if (animatedCell) animatedCell.classList.remove('just-completed');
-                }, 560);
+                }, 680);
             }
         }
         function getSelectableBingoTasks(source = 'library') {
@@ -496,33 +499,59 @@
         function getLineCounts() {
             return getBingoLines().map(line => line.filter(i => bingoState.currentStates[i]).length);
         }
+        function getReachedLineMilestone(previousCounts, nextCounts, lineLength) {
+            const milestones = [
+                { count: 3, label: '三连', haptic: HAPTIC.lineThree },
+                { count: 2, label: '两连', haptic: HAPTIC.lineTwo }
+            ];
+            const reached = milestones.find(milestone =>
+                milestone.count < lineLength &&
+                nextCounts.some((count, i) => count >= milestone.count && (previousCounts[i] || 0) < milestone.count)
+            );
+            if (!reached) return null;
+            return {
+                ...reached,
+                message: reached.count === lineLength - 1 ? `${reached.label}，差一格 Bingo` : `${reached.label}，节奏起来了`
+            };
+        }
         function toggleBingoCell(index) {
             const wasDone = bingoState.currentStates[index];
             const previousCounts = getLineCounts();
             bingoState.currentStates[index] = !wasDone;
             bingoState.lastCompletedIndex = bingoState.currentStates[index] ? index : null;
-            HAPTIC.play(bingoState.currentStates[index] ? 24 : HAPTIC.tap);
+            HAPTIC.play(bingoState.currentStates[index] ? HAPTIC.cellComplete : HAPTIC.tap);
             checkBingoWin(previousCounts, bingoState.currentStates[index]);
             renderBingoGrid();
         }
         function checkBingoWin(previousCounts = [], justCompleted = false) {
-            const n = bingoState.gridSize, s = bingoState.currentStates;
+            const n = bingoState.gridSize;
+            const s = bingoState.currentStates;
             const lines = getBingoLines();
             const winningLines = lines.filter(line => line.every(i => s[i]));
             const isWin = winningLines.length > 0;
             bingoState.bingoLines = winningLines;
+
             if (justCompleted) {
                 const nextCounts = lines.map(line => line.filter(i => s[i]).length);
                 const nearBingo = !isWin && nextCounts.some((count, i) => count === n - 1 && (previousCounts[i] || 0) < n - 1);
-                const formedTwo = !isWin && nextCounts.some((count, i) => count >= Math.min(2, n - 1) && (previousCounts[i] || 0) < Math.min(2, n - 1));
-                if (nearBingo || formedTwo) {
-                    HAPTIC.play(HAPTIC.streak);
-                    showToast(nearBingo ? "差一步就 Bingo" : "两连！节奏起来了");
+                const milestone = !isWin ? getReachedLineMilestone(previousCounts, nextCounts, n) : null;
+                if (nearBingo || milestone) {
+                    HAPTIC.play(nearBingo ? HAPTIC.lineThree : milestone.haptic);
+                    showToast(nearBingo ? (milestone ? milestone.message : '差一格 Bingo') : milestone.message);
                 }
             }
-            if (isWin && !bingoState.hasBingo) { bingoState.hasBingo = true; triggerConfetti(); showToast("BINGO! 整条线已点亮"); }
-            if (!isWin) { bingoState.hasBingo = false; bingoState.bingoLines = []; }
-            updateBingoHistory(); updateBingoProgress();
+
+            if (isWin && !bingoState.hasBingo) {
+                bingoState.hasBingo = true;
+                triggerConfetti();
+                showToast("BINGO! 整条线已点亮");
+            }
+            if (!isWin) {
+                bingoState.hasBingo = false;
+                bingoState.bingoLines = [];
+            }
+            updateBingoHistory();
+            updateBingoProgress();
         }
         function updateBingoHistory() {
             const n = bingoState.gridSize; const completedCount = bingoState.currentStates.filter(Boolean).length;

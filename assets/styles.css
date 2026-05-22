@@ -100,9 +100,11 @@
         .grid-item[data-size="6"] { border-radius: 7px; font-size: 0.62rem; padding: 2px; line-height: 1.1; }
         .grid-item.placeholder-task { color: var(--text-muted); border-style: dashed; }
         .grid-item.active { background-color: var(--gold-soft); border-color: var(--gold); color: var(--gold-text); font-weight: 600; transform: scale(0.92); box-shadow: inset 0 0 10px rgba(234, 179, 8, 0.14); }
-        .grid-item.just-completed::after { content: ""; position: absolute; inset: -35%; background: radial-gradient(circle, rgba(255,255,255,0.88) 0%, rgba(250,204,21,0.42) 36%, rgba(250,204,21,0) 68%); animation: cellFlash 520ms ease-out; pointer-events: none; }
-        .grid-item.bingo-line { background: linear-gradient(135deg, var(--gold-soft), rgba(250, 204, 21, 0.28)); border-color: var(--gold); color: var(--gold-text); box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.22), 0 10px 22px rgba(234, 179, 8, 0.22); transform: scale(0.96); }
-        .grid-item.bingo-line::before { content: ""; position: absolute; inset: 8%; border-radius: 8px; border: 1px solid rgba(234, 179, 8, 0.58); pointer-events: none; }
+        .grid-item.just-completed { animation: cellCompletePop 420ms cubic-bezier(0.2, 0.9, 0.2, 1.25); }
+        .grid-item.just-completed::after { content: ""; position: absolute; inset: -45%; background: radial-gradient(circle, rgba(255,255,255,0.96) 0%, rgba(250,204,21,0.55) 34%, rgba(250,204,21,0) 70%); animation: cellFlash 620ms ease-out; pointer-events: none; }
+        .grid-item.bingo-line { background: linear-gradient(135deg, rgba(254, 243, 199, 0.98), rgba(250, 204, 21, 0.42)); border-color: var(--gold); color: var(--gold-text); box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.34), 0 0 26px rgba(234, 179, 8, 0.34), 0 12px 24px rgba(234, 179, 8, 0.24); transform: scale(0.96); animation: bingoLinePulse 1300ms ease-out; }
+        .grid-item.bingo-line.just-completed { animation: cellCompletePop 420ms cubic-bezier(0.2, 0.9, 0.2, 1.25), bingoLinePulse 1300ms ease-out; }
+        .grid-item.bingo-line::before { content: ""; position: absolute; inset: 7%; border-radius: 8px; border: 1px solid rgba(234, 179, 8, 0.72); background: linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.38) 45%, transparent 72%); pointer-events: none; animation: bingoLineShine 1500ms ease-out; }
         .intent-input { width: 100%; background-color: var(--input-bg); border: 1px solid var(--border-main); border-radius: 10px; padding: 8px 10px; font-size: 12px; line-height: 1.35; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
         .intent-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
         .progress-ring__circle { transition: stroke-dashoffset 0.4s ease-in-out, stroke 0.3s ease; transform: rotate(-90deg); transform-origin: 50% 50%; }
@@ -196,6 +198,21 @@
             0% { opacity: 0; transform: scale(0.2); }
             35% { opacity: 1; transform: scale(0.85); }
             100% { opacity: 0; transform: scale(1.45); }
+        }
+        @keyframes cellCompletePop {
+            0% { transform: scale(0.88); }
+            58% { transform: scale(1.04); }
+            100% { transform: scale(0.92); }
+        }
+        @keyframes bingoLinePulse {
+            0% { filter: brightness(1); }
+            28% { filter: brightness(1.16); }
+            100% { filter: brightness(1); }
+        }
+        @keyframes bingoLineShine {
+            0% { opacity: 0; transform: translateX(-28%) scaleX(0.72); }
+            35% { opacity: 1; }
+            100% { opacity: 0.62; transform: translateX(18%) scaleX(1); }
         }
         @keyframes checkboxCompleteScale {
             0% { transform: scale(0.82); }
