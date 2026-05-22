@@ -227,10 +227,13 @@
                 viewBingo.classList.remove('hidden'); viewDisc.classList.add('hidden');
                 navBingo.className = "flex-1 py-4 flex flex-col items-center text-blue-600 transition";
                 navDisc.className = "flex-1 py-4 flex flex-col items-center text-gray-400 transition hover:text-gray-600";
+                document.getElementById('intentFab')?.classList.remove('hidden');
             } else {
                 viewBingo.classList.add('hidden'); viewDisc.classList.remove('hidden');
                 navBingo.className = "flex-1 py-4 flex flex-col items-center text-gray-400 transition hover:text-gray-600";
                 navDisc.className = "flex-1 py-4 flex flex-col items-center text-slate-800 transition";
+                document.getElementById('intentFab')?.classList.add('hidden');
+                closeTodayIntentDrawer();
             }
         }
 
@@ -258,6 +261,7 @@
             next.tasks = normalizeArray(next.tasks, []).map(task => normalizeDiscTask(task)).filter(task => task.name);
             next.logs = next.logs && typeof next.logs === 'object' ? next.logs : {};
             next.notes = next.notes && typeof next.notes === 'object' ? next.notes : {};
+            next.recoveryDays = next.recoveryDays && typeof next.recoveryDays === 'object' ? next.recoveryDays : {};
             return next;
         }
         function importData(e) {
@@ -429,6 +433,31 @@
         function closeIntentPicker() {
             document.getElementById('intentPickerModal').classList.remove('show');
         }
+        function openTodayIntentDrawer() {
+            updateTodayIntentUI();
+            document.getElementById('todayIntentDrawer').classList.add('show');
+            HAPTIC.play(HAPTIC.tap);
+        }
+        function closeTodayIntentDrawer() {
+            document.getElementById('todayIntentDrawer')?.classList.remove('show');
+        }
+        function updateTodayIntentSummary() {
+            const summary = document.getElementById('intentSummaryText');
+            if (!summary) return;
+            const intent = bingoState.todayIntent || createEmptyTodayIntent();
+            const mainTask = String(intent.mainTask || '').trim();
+            const lightCount = normalizeArray(intent.lightTasks, []).filter(task => String(task || '').trim()).length;
+            const reviewCount = ['doneReason', 'undoneReason', 'moodChange'].filter(field => String(intent[field] || '').trim()).length;
+            if (!mainTask && lightCount === 0 && reviewCount === 0) {
+                summary.textContent = '点击填写主线和轻任务';
+                return;
+            }
+            const parts = [];
+            if (mainTask) parts.push(`主线：${mainTask}`);
+            if (lightCount) parts.push(`${lightCount}/3 个轻任务`);
+            if (reviewCount) parts.push(`${reviewCount}/3 个复盘`);
+            summary.textContent = parts.join(' · ');
+        }
         function renderIntentTaskPicker(options = getSelectableBingoTaskCatalog()) {
             const picker = document.getElementById('intentTaskPicker');
             if (!picker) return;
@@ -588,6 +617,7 @@
                 bingoState.todayIntent[field] = value;
             }
             updateBingoHistory();
+            updateTodayIntentSummary();
             if (field === 'mainTask' || field.startsWith('lightTask')) renderIntentTaskPicker();
         }
         function updateTodayIntentUI() {
@@ -600,6 +630,7 @@
             document.getElementById('intentDoneReason').value = intent.doneReason || '';
             document.getElementById('intentUndoneReason').value = intent.undoneReason || '';
             document.getElementById('intentMoodChange').value = intent.moodChange || '';
+            updateTodayIntentSummary();
             updateIntentTargetUI();
         }
         function quickFillIntent(field, value) {
@@ -855,6 +886,16 @@
 
         // ==================== 纪律系统 (DISCIPLINE) 升级版(支持次数) ====================
         const DISC_KEY = 'discipline_system_data';
+        const FLEX_STREAK_THRESHOLD = 0.6;
+        const RECOVERY_LIMIT_PER_CHAIN = 1;
+        const EXECUTION_LEVELS = [
+            { min: 0, name: 'L0 热身', hint: '先把系统重新点亮。' },
+            { min: 3, name: 'L1 启动稳定', hint: '已经连续进入执行仪式。' },
+            { min: 7, name: 'L2 周节奏', hint: '一周结构开始成形。' },
+            { min: 14, name: 'L3 双周稳定', hint: '底线正在变成默认动作。' },
+            { min: 30, name: 'L4 自动化', hint: '连续执行已经有惯性。' },
+            { min: 60, name: 'L5 核心系统', hint: '这是长期纪律，不是短期冲刺。' }
+        ];
         
         const DEFAULT_DISC_TASKS = [
             normalizeDiscTask({ id: 't1', name: "进食比例", if: "开始吃正餐", then: "按 1/2蔬菜、1/4蛋白质、1/4碳水装盘", tags: ['饮食'], frequency: 'daily', difficulty: 'medium', estimate: 5, minVersion: '先补一份蔬菜或蛋白质', schedule: [0,1,2,3,4,5,6], target: 2 }),
@@ -862,7 +903,7 @@
             normalizeDiscTask({ id: 't3', name: "有氧心率", if: "做有氧运动", then: "保持 Zone 2 心率持续 >40 分钟", tags: ['运动'], frequency: 'custom', difficulty: 'hard', estimate: 40, minVersion: '走路 10 分钟', schedule: [1,3,5], target: 1 }) 
         ];
 
-        let discState = { tasks: DEFAULT_DISC_TASKS.map(task => ({ ...task, tags: [...task.tags], schedule: [...task.schedule] })), logs: {}, notes: {} };
+        let discState = { tasks: DEFAULT_DISC_TASKS.map(task => ({ ...task, tags: [...task.tags], schedule: [...task.schedule] })), logs: {}, notes: {}, recoveryDays: {} };
         let justCompletedDiscTaskId = null;
 
         function isTaskActiveOnDate(task, dateObj) {
@@ -877,6 +918,7 @@
             discState.tasks = normalizeArray(discState.tasks, []).map(task => normalizeDiscTask(task)).filter(task => task.name);
             discState.logs = discState.logs && typeof discState.logs === 'object' ? discState.logs : {};
             discState.notes = discState.notes && typeof discState.notes === 'object' ? discState.notes : {};
+            discState.recoveryDays = discState.recoveryDays && typeof discState.recoveryDays === 'object' ? discState.recoveryDays : {};
             // 兼容迁移：旧数据补充 target 与 schedule
             discState.tasks.forEach(t => { 
                 if(!t.schedule) t.schedule = [0,1,2,3,4,5,6]; 
@@ -988,50 +1030,140 @@
             saveDisc(); 
         }
 
-        function calculateCurrentStreak() {
-            let streak = 0; let streakBroken = false;
-            for (let i = 83; i >= 0; i--) {
-                const d = new Date(); d.setDate(new Date().getDate() - i);
-                const key = d.toLocaleDateString('zh-CN', {timeZone: 'Asia/Shanghai'}).replace(/\//g, '-');
-                const log = discState.logs[key] || {};
-                const requiredTasks = discState.tasks.filter(t => isTaskActiveOnDate(t, d));
-                const totalRequired = requiredTasks.length;
-                let completedCount = 0;
-                requiredTasks.forEach(t => {
-                    let val = log[t.id];
-                    let tTarget = t.target || 1;
-                    if (typeof val === 'boolean') val = val ? tTarget : 0;
-                    if (val >= tTarget) completedCount++;
-                });
-                const ratio = totalRequired > 0 ? completedCount / totalRequired : 1;
-                if (ratio === 1 && !streakBroken) streak++;
-                else if (i > 0) { streak = 0; if (ratio < 1) streakBroken = true; }
+        function getDateKey(dateObj) {
+            return dateObj.toLocaleDateString('zh-CN', {timeZone: 'Asia/Shanghai'}).replace(/\//g, '-');
+        }
+
+        function getDateByOffset(daysAgo) {
+            const d = new Date();
+            d.setHours(12, 0, 0, 0);
+            d.setDate(d.getDate() - daysAgo);
+            return d;
+        }
+
+        function getDiscDayStats(dateObj) {
+            const key = getDateKey(dateObj);
+            const log = discState.logs[key] || {};
+            const requiredTasks = discState.tasks.filter(t => isTaskActiveOnDate(t, dateObj));
+            const totalRequired = requiredTasks.length;
+            let completedCount = 0;
+            requiredTasks.forEach(t => {
+                let val = log[t.id];
+                const tTarget = t.target || 1;
+                if (typeof val === 'boolean') val = val ? tTarget : 0;
+                if ((Number(val) || 0) >= tTarget) completedCount++;
+            });
+
+            const ratio = totalRequired > 0 ? completedCount / totalRequired : 1;
+            const manualRecovery = !!(discState.recoveryDays && discState.recoveryDays[key]);
+            let status = 'miss';
+            let statusLabel = '未完成';
+            if (totalRequired === 0) {
+                status = 'rest';
+                statusLabel = '调整日';
+            } else if (ratio === 1) {
+                status = 'full';
+                statusLabel = '完整日';
+            } else if (ratio >= FLEX_STREAK_THRESHOLD) {
+                status = 'flex';
+                statusLabel = '柔性日';
+            } else if (manualRecovery || completedCount > 0) {
+                status = 'recovery';
+                statusLabel = '恢复日';
             }
-            return streak;
+
+            return { key, dateObj, log, requiredTasks, totalRequired, completedCount, ratio, status, statusLabel, manualRecovery };
+        }
+
+        function getExecutionLevel(growthDays) {
+            let current = EXECUTION_LEVELS[0];
+            let next = null;
+            for (let i = 0; i < EXECUTION_LEVELS.length; i++) {
+                if (growthDays >= EXECUTION_LEVELS[i].min) {
+                    current = EXECUTION_LEVELS[i];
+                    next = EXECUTION_LEVELS[i + 1] || null;
+                }
+            }
+            return { current, next };
+        }
+
+        function analyzeFlexibleStreak() {
+            const days = [];
+            let flexStreak = 0;
+            let hardStreak = 0;
+            let growthDays = 0;
+            let recoveryUsed = 0;
+
+            for (let i = 83; i >= 0; i--) {
+                const day = getDiscDayStats(getDateByOffset(i));
+                day.isToday = i === 0;
+
+                if (day.status === 'full') {
+                    flexStreak++;
+                    hardStreak++;
+                    growthDays++;
+                    day.chainEffect = 'gain';
+                } else if (day.status === 'flex') {
+                    flexStreak++;
+                    hardStreak = 0;
+                    growthDays++;
+                    day.chainEffect = 'gain';
+                } else if (day.status === 'recovery') {
+                    hardStreak = 0;
+                    if (flexStreak > 0 && recoveryUsed < RECOVERY_LIMIT_PER_CHAIN) {
+                        flexStreak++;
+                        recoveryUsed++;
+                        day.chainEffect = 'protected';
+                    } else if (day.isToday) {
+                        day.chainEffect = 'pending';
+                    } else {
+                        flexStreak = 0;
+                        growthDays = 0;
+                        recoveryUsed = 0;
+                        day.chainEffect = 'break';
+                    }
+                } else if (day.status === 'miss') {
+                    if (day.isToday) {
+                        day.chainEffect = 'pending';
+                    } else {
+                        flexStreak = 0;
+                        hardStreak = 0;
+                        growthDays = 0;
+                        recoveryUsed = 0;
+                        day.chainEffect = 'break';
+                    }
+                } else {
+                    day.chainEffect = flexStreak > 0 ? 'hold' : 'neutral';
+                }
+
+                day.flexStreakAfter = flexStreak;
+                day.hardStreakAfter = hardStreak;
+                day.growthDaysAfter = growthDays;
+                days.push(day);
+            }
+
+            const level = getExecutionLevel(growthDays);
+            return {
+                days,
+                flexStreak,
+                hardStreak,
+                growthDays,
+                recoveryUsed,
+                recoveryLeft: Math.max(0, RECOVERY_LIMIT_PER_CHAIN - recoveryUsed),
+                level,
+                today: days[days.length - 1]
+            };
+        }
+
+        function calculateCurrentStreak() {
+            return analyzeFlexibleStreak().flexStreak;
         }
 
         function renderHeatmap() {
             const grid = document.getElementById('heatmapGrid'); grid.innerHTML = '';
-            let streak = 0; let streakBroken = false;
-            
-            for (let i = 83; i >= 0; i--) { 
-                const d = new Date(); d.setDate(new Date().getDate() - i);
-                const key = d.toLocaleDateString('zh-CN', {timeZone: 'Asia/Shanghai'}).replace(/\//g, '-');
-                const log = discState.logs[key] || {};
-                
-                const requiredTasks = discState.tasks.filter(t => isTaskActiveOnDate(t, d));
-                const totalRequired = requiredTasks.length;
-                
-                let completedCount = 0;
-                requiredTasks.forEach(t => { 
-                    let val = log[t.id];
-                    let tTarget = t.target || 1;
-                    if (typeof val === 'boolean') val = val ? tTarget : 0;
-                    if (val >= tTarget) completedCount++; 
-                });
-
-                let ratio = 1; 
-                if (totalRequired > 0) ratio = completedCount / totalRequired;
+            const analysis = analyzeFlexibleStreak();
+            analysis.days.forEach(day => {
+                const { key, ratio, totalRequired, completedCount } = day;
                 
                 let level = '';
                 if (totalRequired === 0) level = 'level-4'; 
@@ -1040,51 +1172,89 @@
                 else if (ratio > 0.6 && ratio < 1) level = 'level-3';
                 else if (ratio === 1) level = 'level-4';
 
-                if (ratio === 1 && !streakBroken) streak++;
-                else if (i > 0) { streak = 0; if (ratio < 1) streakBroken = true; }
-
                 const cell = document.createElement('div'); 
-                cell.className = `heatmap-cell ${level}`;
+                const statusClass = day.status === 'flex' ? 'flex-day' : day.status === 'recovery' ? 'recovery-day' : day.status === 'rest' ? 'rest-day' : '';
+                cell.className = `heatmap-cell ${level} ${statusClass}`;
                 cell.dataset.date = key;
-                cell.title = `${key}: ${completedCount}/${totalRequired} ${totalRequired === 0 ? '(休)' : ''}`;
-                cell.onclick = () => showHeatmapDetail(key, requiredTasks, log, completedCount, totalRequired, cell);
+                cell.title = `${key}: ${day.statusLabel} · ${completedCount}/${totalRequired}`;
+                cell.onclick = () => showHeatmapDetail(day, cell);
                 grid.appendChild(cell);
-            }
-            document.getElementById('streakCount').innerText = `${streak} Streaks`;
+            });
+            document.getElementById('streakCount').innerText = `${analysis.flexStreak} 柔性 Streak`;
+            renderStreakInsight(analysis);
             grid.scrollLeft = grid.scrollWidth;
             const today = getTodayDateStr();
             const todayCell = grid.querySelector(`[data-date="${today}"]`);
-            if (todayCell) {
-                const todayLog = discState.logs[today] || {};
-                const todayTasks = discState.tasks.filter(t => isTaskActiveOnDate(t, new Date()));
-                let todayCompleted = 0;
-                todayTasks.forEach(t => {
-                    let val = todayLog[t.id];
-                    const target = t.target || 1;
-                    if (typeof val === 'boolean') val = val ? target : 0;
-                    if ((Number(val) || 0) >= target) todayCompleted++;
-                });
-                showHeatmapDetail(today, todayTasks, todayLog, todayCompleted, todayTasks.length, todayCell);
-            }
-            return streak;
+            if (todayCell) showHeatmapDetail(analysis.today, todayCell);
+            return analysis.flexStreak;
         }
-        function showHeatmapDetail(key, requiredTasks, log, completedCount, totalRequired, cellEl) {
+
+        function renderStreakInsight(analysis) {
+            const panel = document.getElementById('streakInsight');
+            if (!panel) return;
+            const { current, next } = analysis.level;
+            const nextProgress = next ? Math.min(100, Math.max(0, ((analysis.growthDays - current.min) / (next.min - current.min)) * 100)) : 100;
+            const today = analysis.today;
+            const todayLabel = today.status === 'miss' && today.isToday ? '今日待执行' : today.statusLabel;
+            const copy = next
+                ? `距离 ${next.name} 还差 ${Math.max(0, next.min - analysis.growthDays)} 个完整/柔性执行日。恢复日会保住连续感，但不会增加等级进度。`
+                : current.hint;
+            const recoveryButton = today.totalRequired > 0 && today.status !== 'full'
+                ? `<button type="button" class="recovery-toggle btn-press ${today.manualRecovery ? 'active' : ''}" onclick="toggleTodayRecovery()"><i class="fas fa-life-ring"></i> ${today.manualRecovery ? '已记录最低版本 · 点击撤销' : '记录最低版本恢复日'}</button>`
+                : '';
+
+            panel.innerHTML = `
+                <div class="streak-level-row">
+                    <div>
+                        <span class="streak-kicker">连续执行等级</span>
+                        <strong class="streak-level-name">${current.name}</strong>
+                    </div>
+                    <span class="streak-status ${today.status}">${todayLabel}</span>
+                </div>
+                <div class="streak-metrics">
+                    <div class="streak-metric"><strong>${analysis.flexStreak}</strong><span>柔性连续</span></div>
+                    <div class="streak-metric"><strong>${analysis.hardStreak}</strong><span>完美天数</span></div>
+                    <div class="streak-metric"><strong>${analysis.recoveryLeft}</strong><span>恢复缓冲</span></div>
+                </div>
+                <div class="streak-progress"><div class="streak-progress-bar" style="width:${nextProgress.toFixed(0)}%"></div></div>
+                <p class="streak-copy">${copy}</p>
+                ${recoveryButton}
+            `;
+        }
+
+        function toggleTodayRecovery() {
+            const today = getTodayDateStr();
+            if (!discState.recoveryDays) discState.recoveryDays = {};
+            if (discState.recoveryDays[today]) {
+                delete discState.recoveryDays[today];
+                showToast('已撤销今日恢复日');
+            } else {
+                discState.recoveryDays[today] = true;
+                showToast('已记录最低版本恢复日');
+            }
+            HAPTIC.play(HAPTIC.success);
+            saveDisc();
+            renderHeatmap();
+        }
+
+        function showHeatmapDetail(day, cellEl) {
             document.querySelectorAll('#heatmapGrid .selected-day').forEach(cell => cell.classList.remove('selected-day'));
             if (cellEl) cellEl.classList.add('selected-day');
             const detail = document.getElementById('heatmapDetail');
-            if (totalRequired === 0) {
-                detail.innerHTML = `<strong>${escapeHTML(key)}</strong><br>系统调整日，无核心纪律。`;
+            if (day.totalRequired === 0) {
+                detail.innerHTML = `<strong>${escapeHTML(day.key)}</strong> · ${day.statusLabel}<br>系统调整日，无核心纪律。`;
                 return;
             }
-            const items = requiredTasks.map(task => {
+            const items = day.requiredTasks.map(task => {
                 const target = task.target || 1;
-                let val = log[task.id];
+                let val = day.log[task.id];
                 if (typeof val === 'boolean') val = val ? target : 0;
                 val = Number(val) || 0;
                 return `${val >= target ? '已完成' : '未完成'} ${escapeHTML(task.name)} (${val}/${target})`;
             }).join('<br>');
-            const note = discState.notes[key] ? `<br>备注：${escapeHTML(discState.notes[key])}` : '';
-            detail.innerHTML = `<strong>${escapeHTML(key)}</strong> · ${completedCount}/${totalRequired}<br>${items}${note}`;
+            const recovery = day.manualRecovery ? '<br>恢复机制：已记录最低版本完成。' : '';
+            const note = discState.notes[day.key] ? `<br>备注：${escapeHTML(discState.notes[day.key])}` : '';
+            detail.innerHTML = `<strong>${escapeHTML(day.key)}</strong> · ${day.statusLabel} · ${day.completedCount}/${day.totalRequired}<br>${items}${recovery}${note}`;
         }
 
         // --- 纪律设置 ---

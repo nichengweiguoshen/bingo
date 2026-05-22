@@ -81,46 +81,15 @@
                 </button>
             </section>
 
-            <section class="px-6 mb-5">
-                <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                    <div class="flex items-center justify-between mb-3">
-                        <div>
-                            <h3 class="text-sm font-bold text-gray-900">今日意图</h3>
-                            <p class="text-[10px] text-gray-500 mt-0.5">1 个主线，3 个轻任务，晚间复盘。</p>
-                        </div>
-                        <i class="fas fa-bullseye text-blue-500"></i>
-                    </div>
-                    <div class="space-y-2">
-                        <input id="intentMainTask" class="intent-input" type="text" placeholder="今日主线任务" onfocus="setActiveIntentTarget('mainTask')" oninput="updateTodayIntent('mainTask', this.value)">
-                        <div class="grid grid-cols-3 gap-2">
-                            <input id="intentLightTask0" class="intent-input" type="text" placeholder="轻任务 1" onfocus="setActiveIntentTarget('lightTask0')" oninput="updateTodayIntent('lightTask0', this.value)">
-                            <input id="intentLightTask1" class="intent-input" type="text" placeholder="轻任务 2" onfocus="setActiveIntentTarget('lightTask1')" oninput="updateTodayIntent('lightTask1', this.value)">
-                            <input id="intentLightTask2" class="intent-input" type="text" placeholder="轻任务 3" onfocus="setActiveIntentTarget('lightTask2')" oninput="updateTodayIntent('lightTask2', this.value)">
-                        </div>
-                        <div class="intent-picker-entry">
-                            <button type="button" class="intent-picker-button btn-press" onclick="openIntentPicker()">
-                                <i class="fas fa-layer-group"></i><span>选择任务</span>
-                            </button>
-                            <span id="activeIntentTargetLabel" class="intent-target-label">填入主线</span>
-                        </div>
-                        <div class="grid grid-cols-1 gap-2 pt-1">
-                            <input id="intentTrigger" class="intent-input" type="text" placeholder="触发条件：如果..." oninput="updateTodayIntent('trigger', this.value)">
-                            <input id="intentObstacle" class="intent-input" type="text" placeholder="障碍预演：如果卡住..." oninput="updateTodayIntent('obstacle', this.value)">
-                        </div>
-                        <div class="grid grid-cols-1 gap-2 pt-1">
-                            <input id="intentDoneReason" class="intent-input" type="text" placeholder="完成原因" oninput="updateTodayIntent('doneReason', this.value)">
-                            <input id="intentUndoneReason" class="intent-input" type="text" placeholder="未完成原因" oninput="updateTodayIntent('undoneReason', this.value)">
-                            <input id="intentMoodChange" class="intent-input" type="text" placeholder="情绪变化" oninput="updateTodayIntent('moodChange', this.value)">
-                        </div>
-                        <div class="flex flex-wrap gap-2 pt-1">
-                            <button type="button" class="reason-chip" onclick="fillIntentFromTaskPool('board')">盘面填满</button>
-                            <button type="button" class="reason-chip" onclick="fillIntentFromTaskPool('library')">任务池随机</button>
-                            <button type="button" class="reason-chip" onclick="quickFillIntent('doneReason', '提前安排好环境')">环境准备</button>
-                            <button type="button" class="reason-chip" onclick="quickFillIntent('undoneReason', '任务太大，先切到最低版本')">最低版本</button>
-                            <button type="button" class="reason-chip" onclick="quickFillIntent('obstacle', '如果拖延，就先做 2 分钟启动')">2 分钟启动</button>
-                        </div>
-                    </div>
-                </div>
+            <section class="px-6 mb-3">
+                <button type="button" class="intent-summary-card btn-press" onclick="openTodayIntentDrawer()">
+                    <span class="intent-summary-icon"><i class="fas fa-bullseye"></i></span>
+                    <span class="intent-summary-copy">
+                        <span class="intent-summary-title">今日意图</span>
+                        <span id="intentSummaryText" class="intent-summary-text">点击填写主线和轻任务</span>
+                    </span>
+                    <span class="intent-summary-action"><i class="fas fa-pen"></i></span>
+                </button>
             </section>
 
             <section class="bingo-grid flex-1" id="gridContainer"></section>
@@ -136,6 +105,10 @@
                 </div>
             </section>
         </div>
+
+        <button id="intentFab" type="button" class="intent-fab btn-press" onclick="openTodayIntentDrawer()" aria-label="编辑今日意图">
+            <i class="fas fa-bullseye"></i>
+        </button>
 
         <div id="view-discipline" class="flex-1 flex flex-col w-full h-full hidden bg-slate-50">
             <header class="app-header pt-8 pb-4 px-6 flex justify-between items-center gap-3">
@@ -172,6 +145,7 @@
                         </div>
                     </div>
                 </div>
+                <div id="streakInsight" class="streak-insight mt-3"></div>
                 <div id="heatmapDetail" class="detail-panel mt-3 mx-1">点选热力图格子查看当日完成详情。</div>
             </section>
 
@@ -199,6 +173,54 @@
                 <span class="text-[10px] font-bold">纪律系统</span>
             </button>
         </nav>
+
+        <div id="todayIntentDrawer" class="modal-overlay intent-drawer-overlay fixed inset-0 flex items-end justify-center" onclick="if (event.target === this) closeTodayIntentDrawer()">
+            <div class="modal-content intent-drawer-content bg-white w-full max-w-[480px] shadow-xl overflow-hidden flex flex-col">
+                <div class="intent-drawer-handle"></div>
+                <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <div>
+                        <h3 class="font-bold text-gray-800">今日意图</h3>
+                        <p class="text-[10px] text-gray-500 mt-0.5">1 个主线，3 个轻任务，晚间复盘。</p>
+                    </div>
+                    <button onclick="closeTodayIntentDrawer()" class="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex justify-center items-center hover:bg-gray-300" aria-label="收起今日意图"><i class="fas fa-chevron-down"></i></button>
+                </div>
+                <div class="p-4 overflow-y-auto custom-scroll intent-drawer-body">
+                    <div class="space-y-2">
+                        <input id="intentMainTask" class="intent-input" type="text" placeholder="今日主线任务" onfocus="setActiveIntentTarget('mainTask')" oninput="updateTodayIntent('mainTask', this.value)">
+                        <div class="grid grid-cols-3 gap-2">
+                            <input id="intentLightTask0" class="intent-input" type="text" placeholder="轻任务 1" onfocus="setActiveIntentTarget('lightTask0')" oninput="updateTodayIntent('lightTask0', this.value)">
+                            <input id="intentLightTask1" class="intent-input" type="text" placeholder="轻任务 2" onfocus="setActiveIntentTarget('lightTask1')" oninput="updateTodayIntent('lightTask1', this.value)">
+                            <input id="intentLightTask2" class="intent-input" type="text" placeholder="轻任务 3" onfocus="setActiveIntentTarget('lightTask2')" oninput="updateTodayIntent('lightTask2', this.value)">
+                        </div>
+                        <div class="intent-picker-entry">
+                            <button type="button" class="intent-picker-button btn-press" onclick="openIntentPicker()">
+                                <i class="fas fa-layer-group"></i><span>选择任务</span>
+                            </button>
+                            <span id="activeIntentTargetLabel" class="intent-target-label">填入主线</span>
+                        </div>
+                        <div class="grid grid-cols-1 gap-2 pt-1">
+                            <input id="intentTrigger" class="intent-input" type="text" placeholder="触发条件：如果..." oninput="updateTodayIntent('trigger', this.value)">
+                            <input id="intentObstacle" class="intent-input" type="text" placeholder="障碍预演：如果卡住..." oninput="updateTodayIntent('obstacle', this.value)">
+                        </div>
+                        <div class="grid grid-cols-1 gap-2 pt-1">
+                            <input id="intentDoneReason" class="intent-input" type="text" placeholder="完成原因" oninput="updateTodayIntent('doneReason', this.value)">
+                            <input id="intentUndoneReason" class="intent-input" type="text" placeholder="未完成原因" oninput="updateTodayIntent('undoneReason', this.value)">
+                            <input id="intentMoodChange" class="intent-input" type="text" placeholder="情绪变化" oninput="updateTodayIntent('moodChange', this.value)">
+                        </div>
+                        <div class="flex flex-wrap gap-2 pt-1">
+                            <button type="button" class="reason-chip" onclick="fillIntentFromTaskPool('board')">盘面填满</button>
+                            <button type="button" class="reason-chip" onclick="fillIntentFromTaskPool('library')">任务池随机</button>
+                            <button type="button" class="reason-chip" onclick="quickFillIntent('doneReason', '提前安排好环境')">环境准备</button>
+                            <button type="button" class="reason-chip" onclick="quickFillIntent('undoneReason', '任务太大，先切到最低版本')">最低版本</button>
+                            <button type="button" class="reason-chip" onclick="quickFillIntent('obstacle', '如果拖延，就先做 2 分钟启动')">2 分钟启动</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 border-t border-gray-100 bg-white">
+                    <button onclick="closeTodayIntentDrawer()" class="w-full bg-gray-900 text-white py-3 rounded-xl font-bold text-sm btn-press">完成</button>
+                </div>
+            </div>
+        </div>
 
         <div id="intentPickerModal" class="modal-overlay fixed inset-0 flex items-end justify-center p-4" onclick="if (event.target === this) closeIntentPicker()">
             <div class="modal-content bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[82vh]">
