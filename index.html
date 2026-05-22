@@ -2,12 +2,12 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Execution System</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#ffffff">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="android-chrome-192x192.png">
     <script>
         (() => {
             const savedTheme = localStorage.getItem('executionSystemTheme') || 'system';
@@ -105,14 +105,22 @@
 
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: var(--page-bg); -webkit-tap-highlight-color: transparent; color: var(--text-main); }
         .mono { font-family: 'JetBrains Mono', monospace; }
-        .app-container { max-width: 480px; margin: 0 auto; background-color: var(--app-bg); min-height: 100vh; display: flex; flex-direction: column; box-shadow: var(--shadow-soft); position: relative; padding-bottom: 70px; }
+        .app-container { width: 100%; max-width: 480px; margin: 0 auto; background-color: var(--app-bg); min-height: 100vh; display: flex; flex-direction: column; box-shadow: var(--shadow-soft); position: relative; padding-bottom: 70px; overflow-x: hidden; }
+        .app-header { display: grid !important; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: end; }
+        .header-actions { display: grid !important; grid-auto-flow: column; grid-auto-columns: 40px; gap: 8px; flex-shrink: 0; }
+        .header-actions > button { width: 40px; height: 40px; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         /* --- Bingo 专属样式 --- */
         .bingo-grid { display: grid; gap: 6px; padding: 0 16px; transition: all 0.3s ease; border-radius: 18px; }
+        .bingo-grid[data-size="5"] { gap: 5px; padding: 0 14px; }
+        .bingo-grid[data-size="6"] { gap: 4px; padding: 0 10px; }
         .bingo-grid.bingo-glow { animation: bingoGoldenGlow 1200ms ease-out; }
         .grid-item { aspect-ratio: 1 / 1; background-color: var(--panel-soft); border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 0.85rem; color: var(--text-body); cursor: pointer; user-select: none; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid var(--border-main); text-align: center; padding: 4px; line-height: 1.2; overflow: hidden; word-break: break-all; }
+        .grid-item[data-size="5"] { border-radius: 8px; font-size: 0.72rem; padding: 3px; }
+        .grid-item[data-size="6"] { border-radius: 7px; font-size: 0.62rem; padding: 2px; line-height: 1.1; }
+        .grid-item.placeholder-task { color: var(--text-muted); border-style: dashed; }
         .grid-item.active { background-color: var(--gold-soft); border-color: var(--gold); color: var(--gold-text); font-weight: 600; transform: scale(0.92); box-shadow: inset 0 0 10px rgba(234, 179, 8, 0.14); }
         .grid-item.just-completed::after { content: ""; position: absolute; inset: -35%; background: radial-gradient(circle, rgba(255,255,255,0.88) 0%, rgba(250,204,21,0.42) 36%, rgba(250,204,21,0) 68%); animation: cellFlash 520ms ease-out; pointer-events: none; }
         .grid-item.bingo-line { background: linear-gradient(135deg, var(--gold-soft), rgba(250, 204, 21, 0.28)); border-color: var(--gold); color: var(--gold-text); box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.22), 0 10px 22px rgba(234, 179, 8, 0.22); transform: scale(0.96); }
@@ -125,6 +133,8 @@
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
         .cal-day-header { font-size: 0.7rem; text-align: center; color: var(--text-muted); font-weight: 600; padding-bottom: 4px; }
         .cal-cell { aspect-ratio: 1 / 1; border-radius: 6px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 0.75rem; font-weight: 600; position: relative; }
+        .cal-cell:not(.cal-empty) { cursor: pointer; }
+        .cal-cell.selected-day { outline: 2px solid var(--primary); outline-offset: 2px; }
         .cal-empty { background-color: transparent; }
         .cal-no-data { background-color: var(--panel-muted); color: var(--text-soft); }
         .cal-partial { background-color: var(--primary-soft); color: var(--primary); border: 1px solid var(--primary-border); }
@@ -140,8 +150,13 @@
         .checkbox-custom.checked { background-color: var(--success); border-color: var(--success); color: #ffffff; }
         .checkbox-custom.just-checked { animation: checkboxCompleteScale 360ms cubic-bezier(0.2, 0.85, 0.25, 1.35); }
         .heatmap-container { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 1fr); gap: 3px; overflow-x: auto; padding-bottom: 10px; }
-        .heatmap-cell { width: 11px; height: 11px; border-radius: 2px; background-color: var(--bg-empty); }
+        .heatmap-cell { width: 11px; height: 11px; border-radius: 2px; background-color: var(--bg-empty); cursor: pointer; }
+        .heatmap-cell.selected-day { outline: 2px solid var(--primary); outline-offset: 1px; }
         .level-1 { background-color: var(--bg-l1); } .level-2 { background-color: var(--bg-l2); } .level-3 { background-color: var(--bg-l3); } .level-4 { background-color: var(--bg-l4); }
+        .detail-panel { border: 1px solid var(--border-main); background: var(--panel-soft); border-radius: 12px; padding: 10px; font-size: 11px; color: var(--text-body); }
+        .detail-panel strong { color: var(--text-main); }
+        .reason-chip { border: 1px solid var(--border-main); background: var(--panel-soft); color: var(--text-muted); border-radius: 999px; padding: 5px 9px; font-size: 10px; font-weight: 700; transition: all 0.2s ease; }
+        .reason-chip:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
 
         /* --- 通用辅助样式 --- */
         button, .grid-item, .task-card { position: relative; overflow: hidden; }
@@ -219,6 +234,15 @@
         .modal-overlay.show { opacity: 1; visibility: visible; }
         .modal-content { transform: translateY(20px) scale(0.95); opacity: 0; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .modal-overlay.show .modal-content { transform: translateY(0) scale(1); opacity: 1; }
+        @media (max-width: 420px) {
+            .app-container { max-width: 100%; }
+            .app-header { column-gap: 8px; }
+            .header-actions { grid-auto-columns: 36px; gap: 6px; }
+            .header-actions > button { width: 36px; height: 36px; }
+            .bingo-grid { padding: 0 10px; gap: 5px; }
+            .bingo-grid[data-size="6"] { padding: 0 6px; gap: 3px; }
+            .intent-input { font-size: 11px; padding: 8px; }
+        }
     </style>
 </head>
 <body>
@@ -226,12 +250,13 @@
     <div class="app-container">
         
         <div id="view-bingo" class="flex-1 flex flex-col w-full h-full">
-            <header class="pt-8 pb-4 px-6 flex justify-between items-end">
-                <div>
+            <header class="app-header pt-8 pb-4 px-6 flex justify-between items-end gap-3">
+                <div class="min-w-0 flex-1">
                     <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Daily Bingo</h1>
                     <p id="bingoDateDisplay" class="text-xs text-gray-500 font-medium uppercase mt-1"></p>
+                    <p class="text-[10px] text-gray-400 mt-1 truncate">Bingo 负责启动，SYSTEM CORE 负责底线。</p>
                 </div>
-                <div class="flex space-x-2">
+                <div class="header-actions flex space-x-2 flex-shrink-0">
                     <button onclick="cycleThemeMode()" class="theme-toggle btn-press w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200" aria-label="切换主题">
                         <i class="theme-toggle-icon theme-icon-system fas fa-circle-half-stroke"></i>
                         <i class="theme-toggle-icon theme-icon-light fas fa-sun"></i>
@@ -290,16 +315,28 @@
                         <i class="fas fa-bullseye text-blue-500"></i>
                     </div>
                     <div class="space-y-2">
-                        <input id="intentMainTask" class="intent-input" type="text" placeholder="今日主线任务" oninput="updateTodayIntent('mainTask', this.value)">
+                        <input id="intentMainTask" class="intent-input" type="text" list="bingoTaskOptions" placeholder="今日主线任务" oninput="updateTodayIntent('mainTask', this.value)">
                         <div class="grid grid-cols-3 gap-2">
-                            <input id="intentLightTask0" class="intent-input" type="text" placeholder="轻任务 1" oninput="updateTodayIntent('lightTask0', this.value)">
-                            <input id="intentLightTask1" class="intent-input" type="text" placeholder="轻任务 2" oninput="updateTodayIntent('lightTask1', this.value)">
-                            <input id="intentLightTask2" class="intent-input" type="text" placeholder="轻任务 3" oninput="updateTodayIntent('lightTask2', this.value)">
+                            <input id="intentLightTask0" class="intent-input" type="text" list="bingoTaskOptions" placeholder="轻任务 1" oninput="updateTodayIntent('lightTask0', this.value)">
+                            <input id="intentLightTask1" class="intent-input" type="text" list="bingoTaskOptions" placeholder="轻任务 2" oninput="updateTodayIntent('lightTask1', this.value)">
+                            <input id="intentLightTask2" class="intent-input" type="text" list="bingoTaskOptions" placeholder="轻任务 3" oninput="updateTodayIntent('lightTask2', this.value)">
+                        </div>
+                        <datalist id="bingoTaskOptions"></datalist>
+                        <div class="grid grid-cols-1 gap-2 pt-1">
+                            <input id="intentTrigger" class="intent-input" type="text" placeholder="触发条件：如果..." oninput="updateTodayIntent('trigger', this.value)">
+                            <input id="intentObstacle" class="intent-input" type="text" placeholder="障碍预演：如果卡住..." oninput="updateTodayIntent('obstacle', this.value)">
                         </div>
                         <div class="grid grid-cols-1 gap-2 pt-1">
                             <input id="intentDoneReason" class="intent-input" type="text" placeholder="完成原因" oninput="updateTodayIntent('doneReason', this.value)">
                             <input id="intentUndoneReason" class="intent-input" type="text" placeholder="未完成原因" oninput="updateTodayIntent('undoneReason', this.value)">
                             <input id="intentMoodChange" class="intent-input" type="text" placeholder="情绪变化" oninput="updateTodayIntent('moodChange', this.value)">
+                        </div>
+                        <div class="flex flex-wrap gap-2 pt-1">
+                            <button type="button" class="reason-chip" onclick="fillIntentFromTaskPool('board')">盘面填满</button>
+                            <button type="button" class="reason-chip" onclick="fillIntentFromTaskPool('library')">任务池随机</button>
+                            <button type="button" class="reason-chip" onclick="quickFillIntent('doneReason', '提前安排好环境')">环境准备</button>
+                            <button type="button" class="reason-chip" onclick="quickFillIntent('undoneReason', '任务太大，先切到最低版本')">最低版本</button>
+                            <button type="button" class="reason-chip" onclick="quickFillIntent('obstacle', '如果拖延，就先做 2 分钟启动')">2 分钟启动</button>
                         </div>
                     </div>
                 </div>
@@ -320,12 +357,13 @@
         </div>
 
         <div id="view-discipline" class="flex-1 flex flex-col w-full h-full hidden bg-slate-50">
-            <header class="pt-8 pb-4 px-6 flex justify-between items-center">
-                <div>
+            <header class="app-header pt-8 pb-4 px-6 flex justify-between items-center gap-3">
+                <div class="min-w-0 flex-1">
                     <h1 class="text-xl font-extrabold tracking-tight text-slate-900">SYSTEM CORE</h1>
                     <p id="discDateDisplay" class="mono text-[10px] text-slate-400 mt-1 uppercase tracking-widest"></p>
+                    <p class="text-[10px] text-slate-400 mt-1 truncate">长期底线，适合固定纪律和触发动作。</p>
                 </div>
-                <div class="flex space-x-2">
+                <div class="header-actions flex space-x-2 flex-shrink-0">
                     <button onclick="cycleThemeMode()" class="theme-toggle w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 btn-press" aria-label="切换主题">
                         <i class="theme-toggle-icon theme-icon-system fas fa-circle-half-stroke"></i>
                         <i class="theme-toggle-icon theme-icon-light fas fa-sun"></i>
@@ -353,6 +391,7 @@
                         </div>
                     </div>
                 </div>
+                <div id="heatmapDetail" class="detail-panel mt-3 mx-1">点选热力图格子查看当日完成详情。</div>
             </section>
 
             <section class="px-6 mb-6 flex-1 overflow-y-auto no-scrollbar">
@@ -396,6 +435,7 @@
                         <div class="cal-day-header">日</div><div class="cal-day-header">一</div><div class="cal-day-header">二</div><div class="cal-day-header">三</div><div class="cal-day-header">四</div><div class="cal-day-header">五</div><div class="cal-day-header">六</div>
                     </div>
                     <div id="calendarContainer" class="calendar-grid"></div>
+                    <div id="bingoDayDetail" class="detail-panel mt-3">点选某天查看当天任务、完成率和复盘内容。</div>
                 </div>
             </div>
         </div>
@@ -461,6 +501,21 @@
             const toast = document.getElementById('toast');
             toast.innerText = message; toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+        function escapeHTML(value = '') {
+            return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+        }
+        function escapeAttr(value = '') {
+            return escapeHTML(value).replace(/`/g, '&#96;');
+        }
+        function normalizeArray(value, fallback = []) {
+            return Array.isArray(value) ? value : fallback;
+        }
+        function registerServiceWorker() {
+            if (!('serviceWorker' in navigator)) return;
+            navigator.serviceWorker.register('./sw.js').catch(() => {
+                showToast('离线缓存注册失败，请稍后重试');
+            });
         }
         const THEME_KEY = 'executionSystemTheme';
         const THEME_MODES = ['system', 'light', 'dark'];
@@ -578,15 +633,42 @@
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `System_Backup_${getTodayDateStr()}.json`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a); showToast("已导出全系统数据");
         }
+        function sanitizeBingoData(data) {
+            const next = { ...bingoState, ...(data || {}) };
+            next.gridSize = [3, 4, 5, 6].includes(Number(next.gridSize)) ? Number(next.gridSize) : 4;
+            next.taskLibrary = normalizeArray(next.taskLibrary, []).map(task => String(task).trim()).filter(Boolean);
+            next.currentTasks = normalizeArray(next.currentTasks, []).map(task => String(task));
+            next.currentStates = normalizeArray(next.currentStates, []).map(Boolean);
+            next.bingoLines = normalizeArray(next.bingoLines, []);
+            next.history = next.history && typeof next.history === 'object' ? next.history : {};
+            next.todayMood = next.todayMood && typeof next.todayMood === 'object' ? next.todayMood : { start: null, end: null };
+            next.todayIntent = { ...createEmptyTodayIntent(), ...(next.todayIntent || {}) };
+            next.todayIntent.lightTasks = normalizeArray(next.todayIntent.lightTasks, ['', '', '']).slice(0, 3);
+            return next;
+        }
+        function sanitizeDiscData(data) {
+            const next = { ...discState, ...(data || {}) };
+            next.tasks = normalizeArray(next.tasks, []).map(task => ({
+                id: String(task.id || `t${Date.now()}${Math.floor(Math.random() * 1000)}`).replace(/[^\w-]/g, '_'),
+                name: String(task.name || ''),
+                if: String(task.if || ''),
+                then: String(task.then || ''),
+                schedule: normalizeArray(task.schedule, [0,1,2,3,4,5,6]).map(Number).filter(day => day >= 0 && day <= 6),
+                target: Math.min(20, Math.max(1, Number(task.target) || 1))
+            }));
+            next.logs = next.logs && typeof next.logs === 'object' ? next.logs : {};
+            next.notes = next.notes && typeof next.notes === 'object' ? next.notes : {};
+            return next;
+        }
         function importData(e) {
             const file = e.target.files[0]; if (!file) return;
             const r = new FileReader();
             r.onload = ev => { 
                 try { 
                     const data = JSON.parse(ev.target.result); 
-                    if(data.bingo) { bingoState = { ...bingoState, ...data.bingo }; saveBingo(); }
-                    else { bingoState = { ...bingoState, ...data }; saveBingo(); }
-                    if(data.discipline) { discState = { ...discState, ...data.discipline }; saveDisc(); }
+                    if(data.bingo) { bingoState = sanitizeBingoData(data.bingo); saveBingo(); }
+                    else { bingoState = sanitizeBingoData(data); saveBingo(); }
+                    if(data.discipline) { discState = sanitizeDiscData(data.discipline); saveDisc(); }
                     window.location.reload(); 
                 } catch (err) { showToast("解析失败"); } 
             };
@@ -598,7 +680,7 @@
         const DEFAULT_BINGO_TASKS = ["写今日意图", "选择今日主线", "推进主线任务", "完成轻任务 1", "完成轻任务 2", "完成轻任务 3", "记录完成原因", "记录未完成原因", "记录情绪变化", "早睡", "阅读", "看盘复盘", "整理房间", "冥想", "喝水", "拉伸", "断舍离", "看纪录片"];
         const MOODS = [{ val: null, icon: '<i class="fas fa-minus-circle"></i>', color: 'text-gray-300', dot: '' }, { val: 'good', icon: '<i class="fas fa-smile"></i>', color: 'text-green-500', dot: 'bg-green-500' }, { val: 'normal', icon: '<i class="fas fa-meh"></i>', color: 'text-yellow-500', dot: 'bg-yellow-500' }, { val: 'bad', icon: '<i class="fas fa-frown"></i>', color: 'text-red-500', dot: 'bg-red-500' }];
         function createEmptyTodayIntent() {
-            return { mainTask: '', lightTasks: ['', '', ''], doneReason: '', undoneReason: '', moodChange: '' };
+            return { mainTask: '', lightTasks: ['', '', ''], trigger: '', obstacle: '', doneReason: '', undoneReason: '', moodChange: '' };
         }
         let bingoState = { gridSize: 4, taskLibrary: [...DEFAULT_BINGO_TASKS], currentTasks: [], currentStates: [], hasBingo: false, bingoLines: [], lastCompletedIndex: null, lastDate: '', todayMood: { start: null, end: null }, todayIntent: createEmptyTodayIntent(), history: {} };
         let tempGridSize = 4;
@@ -606,8 +688,13 @@
         function initBingo() {
             const saved = localStorage.getItem(BINGO_KEY); if (saved) bingoState = { ...bingoState, ...JSON.parse(saved) };
             if (!bingoState.todayMood) bingoState.todayMood = { start: null, end: null }; if (!bingoState.history) bingoState.history = {};
-            if (!bingoState.todayIntent) bingoState.todayIntent = createEmptyTodayIntent();
+            bingoState.gridSize = [3, 4, 5, 6].includes(Number(bingoState.gridSize)) ? Number(bingoState.gridSize) : 4;
+            bingoState.taskLibrary = normalizeArray(bingoState.taskLibrary, []).map(task => String(task).trim()).filter(Boolean);
+            bingoState.currentTasks = normalizeArray(bingoState.currentTasks, []).map(task => String(task));
+            bingoState.currentStates = normalizeArray(bingoState.currentStates, []).map(Boolean);
+            bingoState.todayIntent = { ...createEmptyTodayIntent(), ...(bingoState.todayIntent || {}) };
             if (!Array.isArray(bingoState.todayIntent.lightTasks)) bingoState.todayIntent.lightTasks = ['', '', ''];
+            bingoState.todayIntent.lightTasks = bingoState.todayIntent.lightTasks.slice(0, 3);
             if (!Array.isArray(bingoState.bingoLines)) bingoState.bingoLines = [];
             bingoState.lastCompletedIndex = null;
             let migratedTaskLibrary = false;
@@ -619,13 +706,21 @@
             });
             document.getElementById('bingoDateDisplay').innerText = new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', weekday: 'short' }).replace(/\//g, '·');
             document.getElementById('gridSizeBadge').innerText = `${bingoState.gridSize}x${bingoState.gridSize}`;
-            if (bingoState.lastDate !== getTodayDateStr()) generateBingoGrid();
+            const expectedTotal = bingoState.gridSize ** 2;
+            if (bingoState.lastDate !== getTodayDateStr() || bingoState.currentTasks.length !== expectedTotal || bingoState.currentStates.length !== expectedTotal) generateBingoGrid();
             else { if (migratedTaskLibrary) saveBingo(); renderBingoGrid(); updateBingoProgress(); updateMoodUI(); updateTodayIntentUI(); }
         }
         function saveBingo() { localStorage.setItem(BINGO_KEY, JSON.stringify(bingoState)); }
+        function buildBingoTaskPool(total) {
+            const uniqueTasks = [...new Set(bingoState.taskLibrary.map(task => String(task).trim()).filter(Boolean))];
+            const pool = [...uniqueTasks].sort(() => Math.random() - 0.5);
+            const missing = Math.max(0, total - pool.length);
+            for (let i = 1; i <= missing; i++) pool.push(`自选补位 ${i}`);
+            if (missing > 0) showToast(`任务库不足，已补 ${missing} 个自选格`);
+            return pool;
+        }
         function generateBingoGrid() {
-            let total = bingoState.gridSize ** 2; let pool = [...bingoState.taskLibrary].sort(() => Math.random() - 0.5);
-            while (pool.length < total) pool.push("附加任务");
+            let total = bingoState.gridSize ** 2; let pool = buildBingoTaskPool(total);
             bingoState.currentTasks = pool.slice(0, total); bingoState.currentStates = new Array(total).fill(false);
             bingoState.hasBingo = false; bingoState.bingoLines = []; bingoState.lastCompletedIndex = null; bingoState.lastDate = getTodayDateStr(); bingoState.todayMood = { start: null, end: null }; bingoState.todayIntent = createEmptyTodayIntent();
             document.getElementById('gridSizeBadge').innerText = `${bingoState.gridSize}x${bingoState.gridSize}`;
@@ -633,19 +728,46 @@
         }
         function renderBingoGrid() {
             const n = bingoState.gridSize; const container = document.getElementById('gridContainer');
-            container.style.gridTemplateColumns = `repeat(${n}, 1fr)`; container.innerHTML = '';
+            container.style.gridTemplateColumns = `repeat(${n}, 1fr)`; container.dataset.size = String(n); container.innerHTML = '';
             const highlighted = new Set((bingoState.bingoLines || []).flat());
             bingoState.currentTasks.forEach((task, i) => {
                 const item = document.createElement('div');
-                item.className = `grid-item ${bingoState.currentStates[i] ? 'active' : ''} ${highlighted.has(i) ? 'bingo-line' : ''} ${i === bingoState.lastCompletedIndex ? 'just-completed' : ''}`;
+                const isPlaceholder = /^自选补位\s+\d+$/.test(task);
+                item.className = `grid-item ${isPlaceholder ? 'placeholder-task' : ''} ${bingoState.currentStates[i] ? 'active' : ''} ${highlighted.has(i) ? 'bingo-line' : ''} ${i === bingoState.lastCompletedIndex ? 'just-completed' : ''}`;
                 item.dataset.haptic = 'off';
-                item.style.fontSize = n >= 5 ? '0.75rem' : '0.85rem'; item.innerText = task;
+                item.dataset.index = String(i);
+                item.dataset.size = String(n);
+                item.title = task;
+                item.innerText = task;
                 item.onclick = (event) => { playPressAnimation(item, event); toggleBingoCell(i); };
                 container.appendChild(item);
             });
             if (bingoState.lastCompletedIndex !== null) {
-                setTimeout(() => { bingoState.lastCompletedIndex = null; }, 560);
+                const animatedIndex = bingoState.lastCompletedIndex;
+                setTimeout(() => {
+                    if (bingoState.lastCompletedIndex !== animatedIndex) return;
+                    bingoState.lastCompletedIndex = null;
+                    const animatedCell = container.querySelector(`[data-index="${animatedIndex}"]`);
+                    if (animatedCell) animatedCell.classList.remove('just-completed');
+                }, 560);
             }
+        }
+        function getSelectableBingoTasks(source = 'library') {
+            const base = source === 'board' ? bingoState.currentTasks : bingoState.taskLibrary;
+            return [...new Set(normalizeArray(base, [])
+                .map(task => String(task).trim())
+                .filter(task => task && !/^自选补位\s+\d+$/.test(task)))];
+        }
+        function renderBingoTaskOptions() {
+            const list = document.getElementById('bingoTaskOptions');
+            if (!list) return;
+            list.innerHTML = '';
+            const options = [...new Set([...getSelectableBingoTasks('board'), ...getSelectableBingoTasks('library')])];
+            options.forEach(task => {
+                const option = document.createElement('option');
+                option.value = task;
+                list.appendChild(option);
+            });
         }
         function getBingoLines() {
             const n = bingoState.gridSize; let lines = [];
@@ -674,11 +796,11 @@
             bingoState.bingoLines = winningLines;
             if (justCompleted) {
                 const nextCounts = lines.map(line => line.filter(i => s[i]).length);
-                const formedThree = !isWin && nextCounts.some((count, i) => count === 3 && (previousCounts[i] || 0) < 3);
-                const formedTwo = !isWin && nextCounts.some((count, i) => count === 2 && (previousCounts[i] || 0) < 2);
-                if (formedThree || formedTwo) {
+                const nearBingo = !isWin && nextCounts.some((count, i) => count === n - 1 && (previousCounts[i] || 0) < n - 1);
+                const formedTwo = !isWin && nextCounts.some((count, i) => count >= Math.min(2, n - 1) && (previousCounts[i] || 0) < Math.min(2, n - 1));
+                if (nearBingo || formedTwo) {
                     HAPTIC.play(HAPTIC.streak);
-                    showToast(formedThree ? "三连！差一步就 Bingo" : "两连！节奏起来了");
+                    showToast(nearBingo ? "差一步就 Bingo" : "两连！节奏起来了");
                 }
             }
             if (isWin && !bingoState.hasBingo) { bingoState.hasBingo = true; triggerConfetti(); showToast("BINGO! 整条线已点亮"); }
@@ -688,7 +810,16 @@
         function updateBingoHistory() {
             const n = bingoState.gridSize; const completedCount = bingoState.currentStates.filter(Boolean).length;
             const percent = Math.floor((completedCount / (n * n)) * 100); const todayStr = getTodayDateStr();
-            bingoState.history[todayStr] = { percent: bingoState.hasBingo ? 100 : percent, isBingo: bingoState.hasBingo, moodStart: bingoState.todayMood.start, moodEnd: bingoState.todayMood.end, intent: { ...bingoState.todayIntent, lightTasks: [...(bingoState.todayIntent.lightTasks || [])] } };
+            bingoState.history[todayStr] = {
+                percent: bingoState.hasBingo ? 100 : percent,
+                isBingo: bingoState.hasBingo,
+                moodStart: bingoState.todayMood.start,
+                moodEnd: bingoState.todayMood.end,
+                gridSize: bingoState.gridSize,
+                tasks: [...bingoState.currentTasks],
+                states: [...bingoState.currentStates],
+                intent: { ...bingoState.todayIntent, lightTasks: [...(bingoState.todayIntent.lightTasks || [])] }
+            };
             saveBingo();
         }
         function updateBingoProgress() {
@@ -714,11 +845,38 @@
         }
         function updateTodayIntentUI() {
             const intent = bingoState.todayIntent || createEmptyTodayIntent();
+            renderBingoTaskOptions();
             document.getElementById('intentMainTask').value = intent.mainTask || '';
             for (let i = 0; i < 3; i++) document.getElementById(`intentLightTask${i}`).value = (intent.lightTasks || [])[i] || '';
+            document.getElementById('intentTrigger').value = intent.trigger || '';
+            document.getElementById('intentObstacle').value = intent.obstacle || '';
             document.getElementById('intentDoneReason').value = intent.doneReason || '';
             document.getElementById('intentUndoneReason').value = intent.undoneReason || '';
             document.getElementById('intentMoodChange').value = intent.moodChange || '';
+        }
+        function quickFillIntent(field, value) {
+            const current = (bingoState.todayIntent && bingoState.todayIntent[field]) || '';
+            updateTodayIntent(field, current ? `${current}；${value}` : value);
+            updateTodayIntentUI();
+            HAPTIC.play(HAPTIC.success);
+        }
+        function fillIntentFromTaskPool(source = 'board') {
+            const boardTasks = getSelectableBingoTasks(source);
+            const fallbackTasks = getSelectableBingoTasks('library');
+            const pool = (boardTasks.length >= 4 ? boardTasks : [...new Set([...boardTasks, ...fallbackTasks])])
+                .sort(() => Math.random() - 0.5);
+            if (pool.length === 0) return showToast('任务池还没有可选任务');
+            if (!bingoState.todayIntent) bingoState.todayIntent = createEmptyTodayIntent();
+            bingoState.todayIntent.mainTask = pool[0] || bingoState.todayIntent.mainTask || '';
+            bingoState.todayIntent.lightTasks = [
+                pool[1] || '',
+                pool[2] || '',
+                pool[3] || ''
+            ];
+            updateBingoHistory();
+            updateTodayIntentUI();
+            HAPTIC.play(HAPTIC.success);
+            showToast(source === 'board' ? '已从今日盘面生成意图' : '已从任务池随机生成意图');
         }
         function triggerConfetti() {
             HAPTIC.play(HAPTIC.bingo);
@@ -727,11 +885,11 @@
             void grid.offsetWidth;
             grid.classList.add('bingo-glow');
             setTimeout(() => grid.classList.remove('bingo-glow'), 1300);
-            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            if (typeof confetti === 'function') confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
         }
         function openBingoHistory() { HAPTIC.play(HAPTIC.tap); renderBingoCalendar(); document.getElementById('bingoHistoryModal').classList.add('show'); }
         function closeBingoHistory() { document.getElementById('bingoHistoryModal').classList.remove('show'); }
-function renderBingoCalendar() {
+        function renderBingoCalendar() {
             const now = new Date(); 
             const year = now.getFullYear(), month = now.getMonth(); 
             
@@ -768,26 +926,77 @@ function renderBingoCalendar() {
                 // 去清洗后的字典里找数据，百发百中
                 const record = normalizedHistory[currentCellKey];
                 
-                let cellClass = 'cal-cell cal-no-data'; let innerHtml = `${i}`;
+                let cellClass = 'cal-cell cal-no-data';
                 if (record) {
-                    if (record.isBingo) { cellClass = 'cal-cell cal-bingo'; innerHtml = `${i}<i class="fas fa-star text-[8px] mt-0.5"></i>`; monthBingoCount++; }
+                    if (record.isBingo) { cellClass = 'cal-cell cal-bingo'; monthBingoCount++; }
                     else if (record.percent > 0 || record.moodStart || record.moodEnd) { cellClass = 'cal-cell cal-partial'; }
-                    const getDotColor = (val) => (MOODS.find(m => m.val === val) || {}).dot || '';
-                    if (record.moodStart) innerHtml += `<div class="mood-dot-start ${getDotColor(record.moodStart)}"></div>`;
-                    if (record.moodEnd) innerHtml += `<div class="mood-dot-end ${getDotColor(record.moodEnd)}"></div>`;
                 }
-                
-                // 安全判断"今天"，不再依赖字符串匹配，直接对比数字
-                if (year === now.getFullYear() && month === now.getMonth() && i === now.getDate()) {
-                    innerHtml += `<span class="cal-today-indicator"></span>`;
-                }
-                
+
                 const cell = document.createElement('div'); 
-                cell.className = cellClass; cell.innerHTML = innerHtml; calContainer.appendChild(cell);
+                cell.className = cellClass;
+                cell.dataset.date = currentCellKey;
+                const dayLabel = document.createElement('span');
+                dayLabel.textContent = String(i);
+                cell.appendChild(dayLabel);
+                if (record && record.isBingo) {
+                    const star = document.createElement('i');
+                    star.className = 'fas fa-star text-[8px] mt-0.5';
+                    cell.appendChild(star);
+                }
+                if (record) {
+                    const getDotColor = (val) => (MOODS.find(m => m.val === val) || {}).dot || '';
+                    if (record.moodStart) {
+                        const dot = document.createElement('div');
+                        dot.className = `mood-dot-start ${getDotColor(record.moodStart)}`;
+                        cell.appendChild(dot);
+                    }
+                    if (record.moodEnd) {
+                        const dot = document.createElement('div');
+                        dot.className = `mood-dot-end ${getDotColor(record.moodEnd)}`;
+                        cell.appendChild(dot);
+                    }
+                }
+                if (year === now.getFullYear() && month === now.getMonth() && i === now.getDate()) {
+                    const todayDot = document.createElement('span');
+                    todayDot.className = 'cal-today-indicator';
+                    cell.appendChild(todayDot);
+                }
+                cell.onclick = () => showBingoDayDetail(currentCellKey, record, cell);
+                calContainer.appendChild(cell);
             }
             
             document.getElementById('statTotalBingo').innerText = Object.values(bingoState.history).filter(r => r.isBingo).length;
             document.getElementById('statMonthBingo').innerText = monthBingoCount;
+            showBingoDayDetail(`${year}-${month + 1}-${now.getDate()}`, normalizedHistory[`${year}-${month + 1}-${now.getDate()}`]);
+        }
+        function showBingoDayDetail(dateKey, record, cellEl = null) {
+            document.querySelectorAll('#calendarContainer .selected-day').forEach(cell => cell.classList.remove('selected-day'));
+            if (cellEl) cellEl.classList.add('selected-day');
+            const detail = document.getElementById('bingoDayDetail');
+            if (!record) {
+                detail.innerHTML = `<strong>${escapeHTML(dateKey)}</strong><br>暂无 Bingo 记录。`;
+                return;
+            }
+            const intent = { ...createEmptyTodayIntent(), ...(record.intent || {}) };
+            const lightTasks = normalizeArray(intent.lightTasks, []).filter(Boolean).map(escapeHTML).join(' / ') || '未填写';
+            const taskSummary = normalizeArray(record.tasks, [])
+                .map((task, index) => normalizeArray(record.states, [])[index] ? `✓ ${task}` : null)
+                .filter(Boolean)
+                .slice(0, 6)
+                .map(escapeHTML)
+                .join('，') || '暂无已完成任务';
+            const moodStart = (MOODS.find(m => m.val === record.moodStart) || {}).val ? record.moodStart : '未记录';
+            const moodEnd = (MOODS.find(m => m.val === record.moodEnd) || {}).val ? record.moodEnd : '未记录';
+            detail.innerHTML = `
+                <strong>${escapeHTML(dateKey)}</strong> · ${record.isBingo ? 'Bingo 达成' : `${Number(record.percent || 0)}% 完成`}<br>
+                主线：${escapeHTML(intent.mainTask || '未填写')}<br>
+                轻任务：${lightTasks}<br>
+                已完成：${taskSummary}<br>
+                触发：${escapeHTML(intent.trigger || '未填写')}<br>
+                障碍：${escapeHTML(intent.obstacle || '未填写')}<br>
+                复盘：${escapeHTML(intent.doneReason || '未填写')} / ${escapeHTML(intent.undoneReason || '未填写')}<br>
+                情绪：${escapeHTML(moodStart)} → ${escapeHTML(moodEnd)}，${escapeHTML(intent.moodChange || '未填写')}
+            `;
         }
         function openBingoSettings() { HAPTIC.play(HAPTIC.tap); tempGridSize = bingoState.gridSize; renderBingoSettingsPanel(); document.getElementById('bingoSettingsModal').classList.add('show'); }
         function closeBingoSettings() { document.getElementById('bingoSettingsModal').classList.remove('show'); }
@@ -795,18 +1004,30 @@ function renderBingoCalendar() {
             const sizeSelector = document.getElementById('gridSizeSelector'); sizeSelector.innerHTML = '';
             [3, 4, 5, 6].forEach(size => {
                 const btn = document.createElement('button'); btn.className = `flex-1 py-2 rounded-lg text-sm font-semibold transition btn-press ${size === tempGridSize ? 'bg-blue-500 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`;
-                btn.innerText = `${size}x${size}`; btn.onclick = () => { tempGridSize = size; HAPTIC.play(HAPTIC.tap); renderBingoSettingsPanel(); }; sizeSelector.appendChild(btn);
+                const missing = Math.max(0, size * size - bingoState.taskLibrary.length);
+                btn.innerText = `${size}x${size}`;
+                btn.title = missing > 0 ? `任务库不足时会补 ${missing} 个自选格` : '任务库容量充足';
+                btn.onclick = () => { tempGridSize = size; HAPTIC.play(HAPTIC.tap); renderBingoSettingsPanel(); }; sizeSelector.appendChild(btn);
             });
-            document.getElementById('taskCount').innerText = `共 ${bingoState.taskLibrary.length} 项`;
+            const missing = Math.max(0, tempGridSize * tempGridSize - bingoState.taskLibrary.length);
+            document.getElementById('taskCount').innerText = missing > 0 ? `共 ${bingoState.taskLibrary.length} 项，需补 ${missing} 格` : `共 ${bingoState.taskLibrary.length} 项`;
             const list = document.getElementById('taskLibraryList'); list.innerHTML = '';
             bingoState.taskLibrary.forEach((task, index) => {
                 const div = document.createElement('div'); div.className = 'flex justify-between items-center bg-white p-2 rounded border border-gray-100 shadow-sm';
-                div.innerHTML = `<span class="text-sm text-gray-700 truncate mr-2">${task}</span><button onclick="removeBingoTask(${index})" class="text-gray-400 hover:text-red-500 p-1"><i class="fas fa-trash-alt text-xs"></i></button>`;
+                const label = document.createElement('span');
+                label.className = 'text-sm text-gray-700 truncate mr-2';
+                label.textContent = task;
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'text-gray-400 hover:text-red-500 p-1';
+                removeBtn.setAttribute('aria-label', `删除 ${task}`);
+                removeBtn.innerHTML = '<i class="fas fa-trash-alt text-xs"></i>';
+                removeBtn.onclick = () => removeBingoTask(index);
+                div.append(label, removeBtn);
                 list.appendChild(div);
             });
         }
-        function addBingoTask() { const input = document.getElementById('newTaskInput'); const val = input.value.trim(); if (!val) return; if (bingoState.taskLibrary.includes(val)) return showToast("任务已存在"); bingoState.taskLibrary.unshift(val); input.value = ''; HAPTIC.play(HAPTIC.success); renderBingoSettingsPanel(); saveBingo(); }
-        function removeBingoTask(i) { bingoState.taskLibrary.splice(i, 1); HAPTIC.play(HAPTIC.delete); renderBingoSettingsPanel(); saveBingo(); }
+        function addBingoTask() { const input = document.getElementById('newTaskInput'); const val = input.value.trim(); if (!val) return; if (bingoState.taskLibrary.includes(val)) return showToast("任务已存在"); bingoState.taskLibrary.unshift(val); input.value = ''; HAPTIC.play(HAPTIC.success); renderBingoSettingsPanel(); renderBingoTaskOptions(); saveBingo(); }
+        function removeBingoTask(i) { bingoState.taskLibrary.splice(i, 1); HAPTIC.play(HAPTIC.delete); renderBingoSettingsPanel(); renderBingoTaskOptions(); saveBingo(); }
         function applyBingoSettings() { HAPTIC.play(HAPTIC.success); bingoState.gridSize = tempGridSize; generateBingoGrid(); closeBingoSettings(); showToast("设置已应用"); }
 
 
@@ -831,7 +1052,16 @@ function renderBingoCalendar() {
         function initDiscipline() {
             const saved = localStorage.getItem(DISC_KEY);
             if (saved) discState = JSON.parse(saved);
-            
+            discState.tasks = normalizeArray(discState.tasks, []).map(task => ({
+                id: String(task.id || `t${Date.now()}${Math.floor(Math.random() * 1000)}`).replace(/[^\w-]/g, '_'),
+                name: String(task.name || ''),
+                if: String(task.if || ''),
+                then: String(task.then || ''),
+                schedule: normalizeArray(task.schedule, [0,1,2,3,4,5,6]).map(Number).filter(day => day >= 0 && day <= 6),
+                target: Math.min(20, Math.max(1, Number(task.target) || 1))
+            }));
+            discState.logs = discState.logs && typeof discState.logs === 'object' ? discState.logs : {};
+            discState.notes = discState.notes && typeof discState.notes === 'object' ? discState.notes : {};
             // 兼容迁移：旧数据补充 target 与 schedule
             discState.tasks.forEach(t => { 
                 if(!t.schedule) t.schedule = [0,1,2,3,4,5,6]; 
@@ -882,12 +1112,12 @@ function renderBingoCalendar() {
                 }
 
                 return `
-                <div class="task-card bg-white p-4 rounded-xl flex items-center justify-between" onclick="toggleDiscTask('${task.id}')">
+                <div class="task-card bg-white p-4 rounded-xl flex items-center justify-between" onclick="toggleDiscTask('${escapeAttr(task.id)}')">
                     <div class="flex-1 pr-3">
-                        <h4 class="text-xs font-black text-slate-800 mb-1 tracking-wide">${task.name}</h4>
+                        <h4 class="text-xs font-black text-slate-800 mb-1 tracking-wide">${escapeHTML(task.name)}</h4>
                         <div class="text-[10px] leading-snug">
-                            <span class="text-slate-400 font-bold">IF:</span> <span class="text-slate-500">${task.if}</span><br>
-                            <span class="text-blue-500 font-bold">THEN:</span> <span class="text-slate-700 font-medium">${task.then}</span>
+                            <span class="text-slate-400 font-bold">IF:</span> <span class="text-slate-500">${escapeHTML(task.if)}</span><br>
+                            <span class="text-blue-500 font-bold">THEN:</span> <span class="text-slate-700 font-medium">${escapeHTML(task.then)}</span>
                         </div>
                     </div>
                     <div class="checkbox-custom ${isCompleted ? 'checked' : ''} ${justCompletedDiscTaskId === task.id ? 'just-checked' : ''}">${checkUI}</div>
@@ -902,6 +1132,7 @@ function renderBingoCalendar() {
             if (!discState.logs[today]) discState.logs[today] = {};
             
             const task = discState.tasks.find(t => t.id === id);
+            if (!task) return;
             const target = task.target || 1;
             
             let current = discState.logs[today][id];
@@ -985,12 +1216,46 @@ function renderBingoCalendar() {
 
                 const cell = document.createElement('div'); 
                 cell.className = `heatmap-cell ${level}`;
+                cell.dataset.date = key;
                 cell.title = `${key}: ${completedCount}/${totalRequired} ${totalRequired === 0 ? '(休)' : ''}`;
+                cell.onclick = () => showHeatmapDetail(key, requiredTasks, log, completedCount, totalRequired, cell);
                 grid.appendChild(cell);
             }
             document.getElementById('streakCount').innerText = `${streak} Streaks`;
             grid.scrollLeft = grid.scrollWidth;
+            const today = getTodayDateStr();
+            const todayCell = grid.querySelector(`[data-date="${today}"]`);
+            if (todayCell) {
+                const todayLog = discState.logs[today] || {};
+                const todayTasks = discState.tasks.filter(t => isTaskActiveOnDate(t, new Date()));
+                let todayCompleted = 0;
+                todayTasks.forEach(t => {
+                    let val = todayLog[t.id];
+                    const target = t.target || 1;
+                    if (typeof val === 'boolean') val = val ? target : 0;
+                    if ((Number(val) || 0) >= target) todayCompleted++;
+                });
+                showHeatmapDetail(today, todayTasks, todayLog, todayCompleted, todayTasks.length, todayCell);
+            }
             return streak;
+        }
+        function showHeatmapDetail(key, requiredTasks, log, completedCount, totalRequired, cellEl) {
+            document.querySelectorAll('#heatmapGrid .selected-day').forEach(cell => cell.classList.remove('selected-day'));
+            if (cellEl) cellEl.classList.add('selected-day');
+            const detail = document.getElementById('heatmapDetail');
+            if (totalRequired === 0) {
+                detail.innerHTML = `<strong>${escapeHTML(key)}</strong><br>系统调整日，无核心纪律。`;
+                return;
+            }
+            const items = requiredTasks.map(task => {
+                const target = task.target || 1;
+                let val = log[task.id];
+                if (typeof val === 'boolean') val = val ? target : 0;
+                val = Number(val) || 0;
+                return `${val >= target ? '已完成' : '未完成'} ${escapeHTML(task.name)} (${val}/${target})`;
+            }).join('<br>');
+            const note = discState.notes[key] ? `<br>备注：${escapeHTML(discState.notes[key])}` : '';
+            detail.innerHTML = `<strong>${escapeHTML(key)}</strong> · ${completedCount}/${totalRequired}<br>${items}${note}`;
         }
 
         // --- 纪律设置 ---
@@ -1015,9 +1280,9 @@ function renderBingoCalendar() {
                 const sched = t.schedule || [0,1,2,3,4,5,6];
                 const target = t.target || 1;
                 
-                const safeName = (t.name || '').replace(/"/g, '&quot;');
-                const safeIf = (t.if || '').replace(/"/g, '&quot;');
-                const safeThen = (t.then || '').replace(/"/g, '&quot;');
+                const safeName = escapeAttr(t.name || '');
+                const safeIf = escapeAttr(t.if || '');
+                const safeThen = escapeAttr(t.then || '');
 
                 const dayButtons = dayNames.map((dName, dIdx) => `
                     <button onclick="toggleDiscSchedule(${i}, ${dIdx})" class="w-6 h-6 rounded-full text-[10px] font-bold transition flex items-center justify-center ${sched.includes(dIdx) ? 'bg-blue-500 text-white shadow-sm' : 'bg-slate-100 text-slate-400'}">${dName}</button>
@@ -1081,6 +1346,7 @@ function renderBingoCalendar() {
         // ==================== 启动 ====================
         window.addEventListener('DOMContentLoaded', () => {
             applyThemeMode();
+            registerServiceWorker();
             setupButtonHaptics();
             initBingo();
             initDiscipline();
