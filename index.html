@@ -114,6 +114,11 @@
         .bingo-grid.bingo-glow { animation: bingoGoldenGlow 1200ms ease-out; }
         .grid-item { aspect-ratio: 1 / 1; background-color: var(--panel-soft); border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 0.85rem; color: var(--text-body); cursor: pointer; user-select: none; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid var(--border-main); text-align: center; padding: 4px; line-height: 1.2; overflow: hidden; word-break: break-all; }
         .grid-item.active { background-color: var(--gold-soft); border-color: var(--gold); color: var(--gold-text); font-weight: 600; transform: scale(0.92); box-shadow: inset 0 0 10px rgba(234, 179, 8, 0.14); }
+        .grid-item.just-completed::after { content: ""; position: absolute; inset: -35%; background: radial-gradient(circle, rgba(255,255,255,0.88) 0%, rgba(250,204,21,0.42) 36%, rgba(250,204,21,0) 68%); animation: cellFlash 520ms ease-out; pointer-events: none; }
+        .grid-item.bingo-line { background: linear-gradient(135deg, var(--gold-soft), rgba(250, 204, 21, 0.28)); border-color: var(--gold); color: var(--gold-text); box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.22), 0 10px 22px rgba(234, 179, 8, 0.22); transform: scale(0.96); }
+        .grid-item.bingo-line::before { content: ""; position: absolute; inset: 8%; border-radius: 8px; border: 1px solid rgba(234, 179, 8, 0.58); pointer-events: none; }
+        .intent-input { width: 100%; background-color: var(--input-bg); border: 1px solid var(--border-main); border-radius: 10px; padding: 8px 10px; font-size: 12px; line-height: 1.35; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+        .intent-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
         .progress-ring__circle { transition: stroke-dashoffset 0.4s ease-in-out, stroke 0.3s ease; transform: rotate(-90deg); transform-origin: 50% 50%; }
         
         /* --- Bingo 日历专属样式 --- */
@@ -159,6 +164,11 @@
             0% { box-shadow: 0 0 0 rgba(234, 179, 8, 0); }
             35% { box-shadow: 0 0 0 6px rgba(250, 204, 21, 0.24), 0 0 36px rgba(234, 179, 8, 0.42); }
             100% { box-shadow: 0 0 0 rgba(234, 179, 8, 0); }
+        }
+        @keyframes cellFlash {
+            0% { opacity: 0; transform: scale(0.2); }
+            35% { opacity: 1; transform: scale(0.85); }
+            100% { opacity: 0; transform: scale(1.45); }
         }
         @keyframes checkboxCompleteScale {
             0% { transform: scale(0.82); }
@@ -268,6 +278,31 @@
                     </div>
                     <span id="moodEndIcon" class="text-lg text-gray-300"><i class="fas fa-minus-circle"></i></span>
                 </button>
+            </section>
+
+            <section class="px-6 mb-5">
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-900">今日意图</h3>
+                            <p class="text-[10px] text-gray-500 mt-0.5">1 个主线，3 个轻任务，晚间复盘。</p>
+                        </div>
+                        <i class="fas fa-bullseye text-blue-500"></i>
+                    </div>
+                    <div class="space-y-2">
+                        <input id="intentMainTask" class="intent-input" type="text" placeholder="今日主线任务" oninput="updateTodayIntent('mainTask', this.value)">
+                        <div class="grid grid-cols-3 gap-2">
+                            <input id="intentLightTask0" class="intent-input" type="text" placeholder="轻任务 1" oninput="updateTodayIntent('lightTask0', this.value)">
+                            <input id="intentLightTask1" class="intent-input" type="text" placeholder="轻任务 2" oninput="updateTodayIntent('lightTask1', this.value)">
+                            <input id="intentLightTask2" class="intent-input" type="text" placeholder="轻任务 3" oninput="updateTodayIntent('lightTask2', this.value)">
+                        </div>
+                        <div class="grid grid-cols-1 gap-2 pt-1">
+                            <input id="intentDoneReason" class="intent-input" type="text" placeholder="完成原因" oninput="updateTodayIntent('doneReason', this.value)">
+                            <input id="intentUndoneReason" class="intent-input" type="text" placeholder="未完成原因" oninput="updateTodayIntent('undoneReason', this.value)">
+                            <input id="intentMoodChange" class="intent-input" type="text" placeholder="情绪变化" oninput="updateTodayIntent('moodChange', this.value)">
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <section class="bingo-grid flex-1" id="gridContainer"></section>
@@ -560,52 +595,100 @@
 
         // ==================== BINGO 系统 ====================
         const BINGO_KEY = 'dailyBingoData_pwa';
-        const DEFAULT_BINGO_TASKS = ["早睡", "阅读", "看盘复盘", "整理房间", "冥想", "喝水", "拉伸", "断舍离", "看纪录片"];
+        const DEFAULT_BINGO_TASKS = ["写今日意图", "选择今日主线", "推进主线任务", "完成轻任务 1", "完成轻任务 2", "完成轻任务 3", "记录完成原因", "记录未完成原因", "记录情绪变化", "早睡", "阅读", "看盘复盘", "整理房间", "冥想", "喝水", "拉伸", "断舍离", "看纪录片"];
         const MOODS = [{ val: null, icon: '<i class="fas fa-minus-circle"></i>', color: 'text-gray-300', dot: '' }, { val: 'good', icon: '<i class="fas fa-smile"></i>', color: 'text-green-500', dot: 'bg-green-500' }, { val: 'normal', icon: '<i class="fas fa-meh"></i>', color: 'text-yellow-500', dot: 'bg-yellow-500' }, { val: 'bad', icon: '<i class="fas fa-frown"></i>', color: 'text-red-500', dot: 'bg-red-500' }];
-        let bingoState = { gridSize: 4, taskLibrary: [...DEFAULT_BINGO_TASKS], currentTasks: [], currentStates: [], hasBingo: false, lastDate: '', todayMood: { start: null, end: null }, history: {} };
+        function createEmptyTodayIntent() {
+            return { mainTask: '', lightTasks: ['', '', ''], doneReason: '', undoneReason: '', moodChange: '' };
+        }
+        let bingoState = { gridSize: 4, taskLibrary: [...DEFAULT_BINGO_TASKS], currentTasks: [], currentStates: [], hasBingo: false, bingoLines: [], lastCompletedIndex: null, lastDate: '', todayMood: { start: null, end: null }, todayIntent: createEmptyTodayIntent(), history: {} };
         let tempGridSize = 4;
 
         function initBingo() {
             const saved = localStorage.getItem(BINGO_KEY); if (saved) bingoState = { ...bingoState, ...JSON.parse(saved) };
             if (!bingoState.todayMood) bingoState.todayMood = { start: null, end: null }; if (!bingoState.history) bingoState.history = {};
+            if (!bingoState.todayIntent) bingoState.todayIntent = createEmptyTodayIntent();
+            if (!Array.isArray(bingoState.todayIntent.lightTasks)) bingoState.todayIntent.lightTasks = ['', '', ''];
+            if (!Array.isArray(bingoState.bingoLines)) bingoState.bingoLines = [];
+            bingoState.lastCompletedIndex = null;
+            let migratedTaskLibrary = false;
+            DEFAULT_BINGO_TASKS.forEach(task => {
+                if (!bingoState.taskLibrary.includes(task)) {
+                    bingoState.taskLibrary.push(task);
+                    migratedTaskLibrary = true;
+                }
+            });
             document.getElementById('bingoDateDisplay').innerText = new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', weekday: 'short' }).replace(/\//g, '·');
             document.getElementById('gridSizeBadge').innerText = `${bingoState.gridSize}x${bingoState.gridSize}`;
             if (bingoState.lastDate !== getTodayDateStr()) generateBingoGrid();
-            else { renderBingoGrid(); updateBingoProgress(); updateMoodUI(); }
+            else { if (migratedTaskLibrary) saveBingo(); renderBingoGrid(); updateBingoProgress(); updateMoodUI(); updateTodayIntentUI(); }
         }
         function saveBingo() { localStorage.setItem(BINGO_KEY, JSON.stringify(bingoState)); }
         function generateBingoGrid() {
             let total = bingoState.gridSize ** 2; let pool = [...bingoState.taskLibrary].sort(() => Math.random() - 0.5);
             while (pool.length < total) pool.push("附加任务");
             bingoState.currentTasks = pool.slice(0, total); bingoState.currentStates = new Array(total).fill(false);
-            bingoState.hasBingo = false; bingoState.lastDate = getTodayDateStr(); bingoState.todayMood = { start: null, end: null };
+            bingoState.hasBingo = false; bingoState.bingoLines = []; bingoState.lastCompletedIndex = null; bingoState.lastDate = getTodayDateStr(); bingoState.todayMood = { start: null, end: null }; bingoState.todayIntent = createEmptyTodayIntent();
             document.getElementById('gridSizeBadge').innerText = `${bingoState.gridSize}x${bingoState.gridSize}`;
-            saveBingo(); renderBingoGrid(); updateBingoProgress(); updateMoodUI();
+            saveBingo(); renderBingoGrid(); updateBingoProgress(); updateMoodUI(); updateTodayIntentUI();
         }
         function renderBingoGrid() {
             const n = bingoState.gridSize; const container = document.getElementById('gridContainer');
             container.style.gridTemplateColumns = `repeat(${n}, 1fr)`; container.innerHTML = '';
+            const highlighted = new Set((bingoState.bingoLines || []).flat());
             bingoState.currentTasks.forEach((task, i) => {
-                const item = document.createElement('div'); item.className = `grid-item ${bingoState.currentStates[i] ? 'active' : ''}`;
+                const item = document.createElement('div');
+                item.className = `grid-item ${bingoState.currentStates[i] ? 'active' : ''} ${highlighted.has(i) ? 'bingo-line' : ''} ${i === bingoState.lastCompletedIndex ? 'just-completed' : ''}`;
+                item.dataset.haptic = 'off';
                 item.style.fontSize = n >= 5 ? '0.75rem' : '0.85rem'; item.innerText = task;
-                item.onclick = () => { bingoState.currentStates[i] = !bingoState.currentStates[i]; HAPTIC.play(bingoState.currentStates[i] ? HAPTIC.complete : HAPTIC.tap); checkBingoWin(); renderBingoGrid(); };
+                item.onclick = (event) => { playPressAnimation(item, event); toggleBingoCell(i); };
                 container.appendChild(item);
             });
+            if (bingoState.lastCompletedIndex !== null) {
+                setTimeout(() => { bingoState.lastCompletedIndex = null; }, 560);
+            }
         }
-        function checkBingoWin() {
-            const n = bingoState.gridSize, s = bingoState.currentStates; let lines = [];
+        function getBingoLines() {
+            const n = bingoState.gridSize; let lines = [];
             for (let r=0; r<n; r++) lines.push(Array.from({length:n}, (_,i)=>r*n+i));
             for (let c=0; c<n; c++) lines.push(Array.from({length:n}, (_,i)=>i*n+c));
             lines.push(Array.from({length:n}, (_,i)=>i*n+i), Array.from({length:n}, (_,i)=>i*n+(n-1-i)));
-            let isWin = lines.some(line => line.every(i => s[i]));
-            if (isWin && !bingoState.hasBingo) { triggerConfetti(); bingoState.hasBingo = true; }
-            if (!isWin) bingoState.hasBingo = false;
+            return lines;
+        }
+        function getLineCounts() {
+            return getBingoLines().map(line => line.filter(i => bingoState.currentStates[i]).length);
+        }
+        function toggleBingoCell(index) {
+            const wasDone = bingoState.currentStates[index];
+            const previousCounts = getLineCounts();
+            bingoState.currentStates[index] = !wasDone;
+            bingoState.lastCompletedIndex = bingoState.currentStates[index] ? index : null;
+            HAPTIC.play(bingoState.currentStates[index] ? 24 : HAPTIC.tap);
+            checkBingoWin(previousCounts, bingoState.currentStates[index]);
+            renderBingoGrid();
+        }
+        function checkBingoWin(previousCounts = [], justCompleted = false) {
+            const n = bingoState.gridSize, s = bingoState.currentStates;
+            const lines = getBingoLines();
+            const winningLines = lines.filter(line => line.every(i => s[i]));
+            const isWin = winningLines.length > 0;
+            bingoState.bingoLines = winningLines;
+            if (justCompleted) {
+                const nextCounts = lines.map(line => line.filter(i => s[i]).length);
+                const formedThree = !isWin && nextCounts.some((count, i) => count === 3 && (previousCounts[i] || 0) < 3);
+                const formedTwo = !isWin && nextCounts.some((count, i) => count === 2 && (previousCounts[i] || 0) < 2);
+                if (formedThree || formedTwo) {
+                    HAPTIC.play(HAPTIC.streak);
+                    showToast(formedThree ? "三连！差一步就 Bingo" : "两连！节奏起来了");
+                }
+            }
+            if (isWin && !bingoState.hasBingo) { bingoState.hasBingo = true; triggerConfetti(); showToast("BINGO! 整条线已点亮"); }
+            if (!isWin) { bingoState.hasBingo = false; bingoState.bingoLines = []; }
             updateBingoHistory(); updateBingoProgress();
         }
         function updateBingoHistory() {
             const n = bingoState.gridSize; const completedCount = bingoState.currentStates.filter(Boolean).length;
             const percent = Math.floor((completedCount / (n * n)) * 100); const todayStr = getTodayDateStr();
-            bingoState.history[todayStr] = { percent: bingoState.hasBingo ? 100 : percent, isBingo: bingoState.hasBingo, moodStart: bingoState.todayMood.start, moodEnd: bingoState.todayMood.end };
+            bingoState.history[todayStr] = { percent: bingoState.hasBingo ? 100 : percent, isBingo: bingoState.hasBingo, moodStart: bingoState.todayMood.start, moodEnd: bingoState.todayMood.end, intent: { ...bingoState.todayIntent, lightTasks: [...(bingoState.todayIntent.lightTasks || [])] } };
             saveBingo();
         }
         function updateBingoProgress() {
@@ -616,9 +699,27 @@
             stat.innerText = bingoState.hasBingo ? "BINGO! 任务达成" : "打卡进行中"; stat.className = bingoState.hasBingo ? "text-base font-bold text-yellow-600" : "text-base font-bold text-gray-900";
         }
         function shuffleGrid() { HAPTIC.play(HAPTIC.reset); generateBingoGrid(); showToast("已重新生成"); }
-        function resetBingoGrid() { HAPTIC.play(HAPTIC.reset); bingoState.currentStates.fill(false); bingoState.hasBingo = false; checkBingoWin(); renderBingoGrid(); showToast("状态已清空"); }
+        function resetBingoGrid() { HAPTIC.play(HAPTIC.reset); bingoState.currentStates.fill(false); bingoState.hasBingo = false; bingoState.bingoLines = []; bingoState.lastCompletedIndex = null; checkBingoWin(); renderBingoGrid(); showToast("状态已清空"); }
         function cycleMood(type) { HAPTIC.play(HAPTIC.tap); let idx = MOODS.findIndex(m => m.val === bingoState.todayMood[type]); bingoState.todayMood[type] = MOODS[(idx + 1) % MOODS.length].val; updateBingoHistory(); updateMoodUI(); }
         function updateMoodUI() { ['start', 'end'].forEach(type => { const mood = MOODS.find(m => m.val === bingoState.todayMood[type]) || MOODS[0]; const el = document.getElementById(type === 'start' ? 'moodStartIcon' : 'moodEndIcon'); el.innerHTML = mood.icon; el.className = `text-lg ${mood.color}`; }); }
+        function updateTodayIntent(field, value) {
+            if (!bingoState.todayIntent) bingoState.todayIntent = createEmptyTodayIntent();
+            if (field.startsWith('lightTask')) {
+                const index = Number(field.replace('lightTask', ''));
+                bingoState.todayIntent.lightTasks[index] = value;
+            } else {
+                bingoState.todayIntent[field] = value;
+            }
+            updateBingoHistory();
+        }
+        function updateTodayIntentUI() {
+            const intent = bingoState.todayIntent || createEmptyTodayIntent();
+            document.getElementById('intentMainTask').value = intent.mainTask || '';
+            for (let i = 0; i < 3; i++) document.getElementById(`intentLightTask${i}`).value = (intent.lightTasks || [])[i] || '';
+            document.getElementById('intentDoneReason').value = intent.doneReason || '';
+            document.getElementById('intentUndoneReason').value = intent.undoneReason || '';
+            document.getElementById('intentMoodChange').value = intent.moodChange || '';
+        }
         function triggerConfetti() {
             HAPTIC.play(HAPTIC.bingo);
             const grid = document.getElementById('gridContainer');
