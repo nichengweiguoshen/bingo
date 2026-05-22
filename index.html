@@ -91,13 +91,12 @@
                         <i class="fas fa-bullseye text-blue-500"></i>
                     </div>
                     <div class="space-y-2">
-                        <input id="intentMainTask" class="intent-input" type="text" list="bingoTaskOptions" placeholder="今日主线任务" onfocus="setActiveIntentTarget('mainTask')" oninput="updateTodayIntent('mainTask', this.value)">
+                        <input id="intentMainTask" class="intent-input" type="text" placeholder="今日主线任务" onfocus="setActiveIntentTarget('mainTask')" oninput="updateTodayIntent('mainTask', this.value)">
                         <div class="grid grid-cols-3 gap-2">
-                            <input id="intentLightTask0" class="intent-input" type="text" list="bingoTaskOptions" placeholder="轻任务 1" onfocus="setActiveIntentTarget('lightTask0')" oninput="updateTodayIntent('lightTask0', this.value)">
-                            <input id="intentLightTask1" class="intent-input" type="text" list="bingoTaskOptions" placeholder="轻任务 2" onfocus="setActiveIntentTarget('lightTask1')" oninput="updateTodayIntent('lightTask1', this.value)">
-                            <input id="intentLightTask2" class="intent-input" type="text" list="bingoTaskOptions" placeholder="轻任务 3" onfocus="setActiveIntentTarget('lightTask2')" oninput="updateTodayIntent('lightTask2', this.value)">
+                            <input id="intentLightTask0" class="intent-input" type="text" placeholder="轻任务 1" onfocus="setActiveIntentTarget('lightTask0')" oninput="updateTodayIntent('lightTask0', this.value)">
+                            <input id="intentLightTask1" class="intent-input" type="text" placeholder="轻任务 2" onfocus="setActiveIntentTarget('lightTask1')" oninput="updateTodayIntent('lightTask1', this.value)">
+                            <input id="intentLightTask2" class="intent-input" type="text" placeholder="轻任务 3" onfocus="setActiveIntentTarget('lightTask2')" oninput="updateTodayIntent('lightTask2', this.value)">
                         </div>
-                        <datalist id="bingoTaskOptions"></datalist>
                         <div class="intent-picker-entry">
                             <button type="button" class="intent-picker-button btn-press" onclick="openIntentPicker()">
                                 <i class="fas fa-layer-group"></i><span>选择任务</span>

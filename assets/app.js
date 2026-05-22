@@ -387,16 +387,7 @@
             });
         }
         function renderBingoTaskOptions() {
-            const list = document.getElementById('bingoTaskOptions');
-            if (!list) return;
-            list.innerHTML = '';
             const options = getSelectableBingoTaskCatalog();
-            options.forEach(task => {
-                const option = document.createElement('option');
-                option.value = task.name;
-                option.label = `${labelFor(TASK_DIFFICULTIES, task.difficulty)}难度 · ${task.estimate}m${task.tags.length ? ` · #${task.tags.join(' #')}` : ''}`;
-                list.appendChild(option);
-            });
             renderIntentTaskPicker(options);
         }
         function getTodayIntentValue(field = activeIntentTarget) {

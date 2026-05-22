@@ -1,4 +1,4 @@
-const CACHE_NAME = 'daily-bingo-cache-v5';
+const CACHE_NAME = 'daily-bingo-cache-v6';
 const STATIC_ASSETS = [
   './index.html',
   './assets/styles.css',
