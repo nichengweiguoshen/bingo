@@ -283,6 +283,12 @@
         let bingoState = { gridSize: 4, taskLibrary: [...DEFAULT_BINGO_TASK_LIBRARY], currentTasks: [], currentStates: [], hasBingo: false, bingoLines: [], lastCompletedIndex: null, lastDate: '', todayMood: { start: null, end: null }, todayIntent: createEmptyTodayIntent(), history: {} };
         let tempGridSize = 4;
         let activeIntentTarget = 'mainTask';
+        const INTENT_TARGETS = [
+            { field: 'mainTask', label: '主线', status: '填入主线' },
+            { field: 'lightTask0', label: '轻 1', status: '填入轻任务 1' },
+            { field: 'lightTask1', label: '轻 2', status: '填入轻任务 2' },
+            { field: 'lightTask2', label: '轻 3', status: '填入轻任务 3' }
+        ];
 
         function initBingo() {
             const saved = localStorage.getItem(BINGO_KEY); if (saved) bingoState = { ...bingoState, ...JSON.parse(saved) };
@@ -400,12 +406,40 @@
         }
         function setActiveIntentTarget(field) {
             activeIntentTarget = field;
+            updateIntentTargetUI();
             renderIntentTaskPicker();
+        }
+        function updateIntentTargetUI() {
+            const target = INTENT_TARGETS.find(item => item.field === activeIntentTarget) || INTENT_TARGETS[0];
+            const label = document.getElementById('activeIntentTargetLabel');
+            if (label) label.textContent = target.status;
+            const tabs = document.getElementById('intentTargetTabs');
+            if (!tabs) return;
+            tabs.innerHTML = '';
+            INTENT_TARGETS.forEach(item => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `intent-target-tab btn-press ${item.field === activeIntentTarget ? 'active' : ''}`;
+                btn.textContent = item.label;
+                btn.onclick = () => setActiveIntentTarget(item.field);
+                tabs.appendChild(btn);
+            });
+        }
+        function openIntentPicker(field = activeIntentTarget) {
+            activeIntentTarget = field;
+            updateIntentTargetUI();
+            renderIntentTaskPicker();
+            document.getElementById('intentPickerModal').classList.add('show');
+            HAPTIC.play(HAPTIC.tap);
+        }
+        function closeIntentPicker() {
+            document.getElementById('intentPickerModal').classList.remove('show');
         }
         function renderIntentTaskPicker(options = getSelectableBingoTaskCatalog()) {
             const picker = document.getElementById('intentTaskPicker');
             if (!picker) return;
             picker.innerHTML = '';
+            updateIntentTargetUI();
             const activeValue = getTodayIntentValue();
             const grouped = TASK_DIFFICULTIES.map(item => ({
                 ...item,
@@ -436,10 +470,30 @@
             });
         }
         function selectIntentTask(taskName) {
-            updateTodayIntent(activeIntentTarget, taskName);
+            const currentField = activeIntentTarget;
+            updateTodayIntent(currentField, taskName);
             updateTodayIntentUI();
+            const nextTarget = INTENT_TARGETS[INTENT_TARGETS.findIndex(item => item.field === currentField) + 1];
+            if (nextTarget) {
+                activeIntentTarget = nextTarget.field;
+                updateIntentTargetUI();
+                renderIntentTaskPicker();
+                const focusMap = {
+                    mainTask: 'intentMainTask',
+                    lightTask0: 'intentLightTask0',
+                    lightTask1: 'intentLightTask1',
+                    lightTask2: 'intentLightTask2'
+                };
+                const nextInput = document.getElementById(focusMap[nextTarget.field]);
+                if (nextInput) nextInput.focus({ preventScroll: true });
+                showToast(`已填入：${taskName}，继续 ${nextTarget.label}`);
+            } else {
+                closeIntentPicker();
+                activeIntentTarget = 'mainTask';
+                updateIntentTargetUI();
+                showToast(`已填入：${taskName}`);
+            }
             HAPTIC.play(HAPTIC.success);
-            showToast(`已填入：${taskName}`);
         }
         function getBingoLines() {
             const n = bingoState.gridSize; let lines = [];
@@ -526,6 +580,7 @@
             document.getElementById('intentDoneReason').value = intent.doneReason || '';
             document.getElementById('intentUndoneReason').value = intent.undoneReason || '';
             document.getElementById('intentMoodChange').value = intent.moodChange || '';
+            updateIntentTargetUI();
         }
         function quickFillIntent(field, value) {
             const current = (bingoState.todayIntent && bingoState.todayIntent[field]) || '';

@@ -98,7 +98,12 @@
                             <input id="intentLightTask2" class="intent-input" type="text" list="bingoTaskOptions" placeholder="轻任务 3" onfocus="setActiveIntentTarget('lightTask2')" oninput="updateTodayIntent('lightTask2', this.value)">
                         </div>
                         <datalist id="bingoTaskOptions"></datalist>
-                        <div id="intentTaskPicker" class="intent-task-picker"></div>
+                        <div class="intent-picker-entry">
+                            <button type="button" class="intent-picker-button btn-press" onclick="openIntentPicker()">
+                                <i class="fas fa-layer-group"></i><span>选择任务</span>
+                            </button>
+                            <span id="activeIntentTargetLabel" class="intent-target-label">填入主线</span>
+                        </div>
                         <div class="grid grid-cols-1 gap-2 pt-1">
                             <input id="intentTrigger" class="intent-input" type="text" placeholder="触发条件：如果..." oninput="updateTodayIntent('trigger', this.value)">
                             <input id="intentObstacle" class="intent-input" type="text" placeholder="障碍预演：如果卡住..." oninput="updateTodayIntent('obstacle', this.value)">
@@ -195,6 +200,19 @@
                 <span class="text-[10px] font-bold">纪律系统</span>
             </button>
         </nav>
+
+        <div id="intentPickerModal" class="modal-overlay fixed inset-0 flex items-end justify-center p-4" onclick="if (event.target === this) closeIntentPicker()">
+            <div class="modal-content bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[82vh]">
+                <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h3 class="font-bold text-gray-800">选择任务</h3>
+                    <button onclick="closeIntentPicker()" class="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex justify-center items-center hover:bg-gray-300"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="p-4 overflow-y-auto custom-scroll">
+                    <div id="intentTargetTabs" class="intent-target-tabs mb-3"></div>
+                    <div id="intentTaskPicker" class="intent-task-picker intent-task-picker-modal"></div>
+                </div>
+            </div>
+        </div>
 
         <div id="bingoHistoryModal" class="modal-overlay fixed inset-0 flex items-center justify-center p-4">
             <div class="modal-content bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden flex flex-col">
