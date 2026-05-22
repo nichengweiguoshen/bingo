@@ -117,7 +117,15 @@
         }
         function registerServiceWorker() {
             if (!('serviceWorker' in navigator)) return;
-            navigator.serviceWorker.register('./sw.js').catch(() => {
+            let reloadingForServiceWorkerUpdate = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (reloadingForServiceWorkerUpdate) return;
+                reloadingForServiceWorkerUpdate = true;
+                window.location.reload();
+            });
+            navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(registration => {
+                registration.update();
+            }).catch(() => {
                 showToast('离线缓存注册失败，请稍后重试');
             });
         }
