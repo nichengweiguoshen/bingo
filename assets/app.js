@@ -29,6 +29,12 @@
             { value: 'medium', label: '中' },
             { value: 'hard', label: '高' }
         ];
+        const DIFFICULTY_ORDER = { easy: 0, medium: 1, hard: 2 };
+        const DIFFICULTY_TEXT = {
+            easy: { label: '低难度', hint: '适合启动' },
+            medium: { label: '中难度', hint: '稳定推进' },
+            hard: { label: '高难度', hint: '主线攻坚' }
+        };
         const TASK_TEMPLATES = {
             bingo: [
                 { key: 'tinyStart', label: '2 分钟启动', task: { name: '2 分钟启动', tags: ['启动'], frequency: 'daily', difficulty: 'easy', estimate: 2, minVersion: '打开工具并做第一步' } },
@@ -276,6 +282,7 @@
         }
         let bingoState = { gridSize: 4, taskLibrary: [...DEFAULT_BINGO_TASK_LIBRARY], currentTasks: [], currentStates: [], hasBingo: false, bingoLines: [], lastCompletedIndex: null, lastDate: '', todayMood: { start: null, end: null }, todayIntent: createEmptyTodayIntent(), history: {} };
         let tempGridSize = 4;
+        let activeIntentTarget = 'mainTask';
 
         function initBingo() {
             const saved = localStorage.getItem(BINGO_KEY); if (saved) bingoState = { ...bingoState, ...JSON.parse(saved) };
@@ -350,16 +357,89 @@
                 .map(task => getTaskName(task))
                 .filter(task => task && !/^自选补位\s+\d+$/.test(task)))];
         }
+        function getBingoTaskMetaByName(name) {
+            const task = bingoState.taskLibrary.find(item => getTaskName(item) === name);
+            return task ? normalizeTaskRecord(task) : normalizeTaskRecord({ name, difficulty: 'medium', estimate: 10 });
+        }
+        function getSelectableBingoTaskCatalog() {
+            const byName = new Map();
+            getSelectableBingoTasks('board').forEach(name => {
+                const meta = getBingoTaskMetaByName(name);
+                byName.set(name, { ...meta, source: 'board' });
+            });
+            bingoState.taskLibrary.forEach(task => {
+                const meta = normalizeTaskRecord(task);
+                if (!meta.name || /^自选补位\s+\d+$/.test(meta.name)) return;
+                if (!byName.has(meta.name)) byName.set(meta.name, { ...meta, source: 'library' });
+            });
+            return [...byName.values()].sort((a, b) => {
+                const difficultyDiff = DIFFICULTY_ORDER[a.difficulty] - DIFFICULTY_ORDER[b.difficulty];
+                if (difficultyDiff) return difficultyDiff;
+                const estimateDiff = Number(a.estimate || 0) - Number(b.estimate || 0);
+                if (estimateDiff) return estimateDiff;
+                return a.name.localeCompare(b.name, 'zh-CN');
+            });
+        }
         function renderBingoTaskOptions() {
             const list = document.getElementById('bingoTaskOptions');
             if (!list) return;
             list.innerHTML = '';
-            const options = [...new Set([...getSelectableBingoTasks('board'), ...getSelectableBingoTasks('library')])];
+            const options = getSelectableBingoTaskCatalog();
             options.forEach(task => {
                 const option = document.createElement('option');
-                option.value = task;
+                option.value = task.name;
+                option.label = `${labelFor(TASK_DIFFICULTIES, task.difficulty)}难度 · ${task.estimate}m${task.tags.length ? ` · #${task.tags.join(' #')}` : ''}`;
                 list.appendChild(option);
             });
+            renderIntentTaskPicker(options);
+        }
+        function getTodayIntentValue(field = activeIntentTarget) {
+            const intent = bingoState.todayIntent || createEmptyTodayIntent();
+            if (field.startsWith('lightTask')) return (intent.lightTasks || [])[Number(field.replace('lightTask', ''))] || '';
+            return intent[field] || '';
+        }
+        function setActiveIntentTarget(field) {
+            activeIntentTarget = field;
+            renderIntentTaskPicker();
+        }
+        function renderIntentTaskPicker(options = getSelectableBingoTaskCatalog()) {
+            const picker = document.getElementById('intentTaskPicker');
+            if (!picker) return;
+            picker.innerHTML = '';
+            const activeValue = getTodayIntentValue();
+            const grouped = TASK_DIFFICULTIES.map(item => ({
+                ...item,
+                tasks: options.filter(task => task.difficulty === item.value)
+            })).filter(group => group.tasks.length);
+            grouped.forEach(group => {
+                const section = document.createElement('section');
+                section.className = 'intent-task-group';
+                const header = document.createElement('div');
+                header.className = 'intent-task-group-header';
+                const text = DIFFICULTY_TEXT[group.value];
+                header.innerHTML = `<span class="difficulty-badge ${group.value}">${text.label}</span><span>${text.hint}</span>`;
+                const grid = document.createElement('div');
+                grid.className = 'intent-task-grid';
+                group.tasks.forEach(task => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = `intent-task-btn btn-press ${task.name === activeValue ? 'active-intent-task' : ''}`;
+                    btn.dataset.difficulty = task.difficulty;
+                    btn.title = task.minVersion ? `最低版本：${task.minVersion}` : '';
+                    const tags = task.tags.slice(0, 2).map(tag => `#${tag}`).join(' ');
+                    btn.innerHTML = `<strong>${escapeHTML(task.name)}</strong><span>${labelFor(TASK_DIFFICULTIES, task.difficulty)} · ${Number(task.estimate || 0)}m${tags ? ` · ${escapeHTML(tags)}` : ''}</span>`;
+                    btn.onclick = () => selectIntentTask(task.name);
+                    grid.appendChild(btn);
+                });
+                section.append(header, grid);
+                picker.appendChild(section);
+            });
+        }
+        function selectIntentTask(taskName) {
+            updateTodayIntent(activeIntentTarget, taskName);
+            updateTodayIntentUI();
+            HAPTIC.play(HAPTIC.success);
+            showToast(`已填入：${taskName}`);
         }
         function getBingoLines() {
             const n = bingoState.gridSize; let lines = [];
@@ -434,6 +514,7 @@
                 bingoState.todayIntent[field] = value;
             }
             updateBingoHistory();
+            if (field === 'mainTask' || field.startsWith('lightTask')) renderIntentTaskPicker();
         }
         function updateTodayIntentUI() {
             const intent = bingoState.todayIntent || createEmptyTodayIntent();
