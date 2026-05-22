@@ -1,6 +1,8 @@
-const CACHE_NAME = 'daily-bingo-cache-v2';
+const CACHE_NAME = 'daily-bingo-cache-v3';
 const STATIC_ASSETS = [
   './index.html',
+  './assets/styles.css',
+  './assets/app.js',
   './manifest.json',
   './android-chrome-192x192.png',
   './icon-512.png',
