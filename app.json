@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Daily Bingo",
+    "slug": "daily-bingo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./icon-512.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./android-chrome-192x192.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./android-chrome-192x192.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./android-chrome-192x192.png"
+    }
+  }
+}
