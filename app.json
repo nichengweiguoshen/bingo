@@ -22,7 +22,8 @@
         "foregroundImage": "./android-chrome-192x192.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.dailybingo"
     },
     "web": {
       "favicon": "./android-chrome-192x192.png"
