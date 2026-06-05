@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Execution System</title>
+    <title>Daily Bingo</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#ffffff">
@@ -18,70 +18,83 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="./assets/styles.css">
+    <link rel="stylesheet" href="./assets/styles.css?v=9">
 </head>
 <body>
 
     <div class="app-container">
         
-        <div id="view-bingo" class="flex-1 flex flex-col w-full h-full">
-            <header class="app-header pt-8 pb-4 px-6 flex justify-between items-end gap-3">
-                <div class="min-w-0 flex-1">
-                    <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Daily Bingo</h1>
-                    <p id="bingoDateDisplay" class="text-xs text-gray-500 font-medium uppercase mt-1"></p>
-                    <p class="text-[10px] text-gray-400 mt-1 truncate">Bingo负责启动，SYSTEM CORE 负责底线。</p>
-                </div>
-                <div class="header-actions flex space-x-2 flex-shrink-0">
-                    <button onclick="cycleThemeMode()" class="theme-toggle btn-press w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200" aria-label="切换主题">
+        <div id="view-bingo" class="home-screen flex-1 flex flex-col w-full h-full">
+            <header class="home-hero">
+                <div class="hero-art" aria-hidden="true"></div>
+                <div class="app-header home-topbar">
+                    <div class="min-w-0 flex-1">
+                        <p id="bingoDateDisplay" class="home-date"></p>
+                        <h1 class="home-title">Daily <span class="title-image" aria-hidden="true"></span> Bingo</h1>
+                    </div>
+                    <div class="header-actions flex space-x-2 flex-shrink-0">
+                    <button onclick="cycleThemeMode()" class="theme-toggle btn-press icon-button" aria-label="切换主题">
                         <i class="theme-toggle-icon theme-icon-system fas fa-circle-half-stroke"></i>
                         <i class="theme-toggle-icon theme-icon-light fas fa-sun"></i>
                         <i class="theme-toggle-icon theme-icon-dark fas fa-moon"></i>
                     </button>
-                    <button onclick="openBingoHistory()" class="btn-press w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200">
+                    <button onclick="openBingoHistory()" class="btn-press icon-button" aria-label="查看打卡记录">
                         <i class="fas fa-calendar-check"></i>
                     </button>
-                    <button onclick="openBingoSettings()" class="btn-press w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200">
+                    <button onclick="openBingoSettings()" class="btn-press icon-button" aria-label="打开 Bingo 设置">
                         <i class="fas fa-sliders-h"></i>
                     </button>
+                    </div>
+                </div>
+
+                <div class="home-progress-panel">
+                    <div class="progress-orbit">
+                        <svg class="progress-svg" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="42" fill="transparent" stroke="var(--panel-muted)" stroke-width="8"></circle>
+                            <circle id="progressRing" class="progress-ring__circle" cx="50" cy="50" r="42" fill="transparent" stroke="var(--primary)" stroke-width="8" stroke-linecap="round" stroke-dasharray="263.89" stroke-dashoffset="263.89"></circle>
+                        </svg>
+                        <span id="progressText" class="progress-number">0%</span>
+                    </div>
+                    <div class="home-progress-copy">
+                        <div class="home-status-row">
+                            <h2 id="progressStatusText" class="home-status">打卡进行中</h2>
+                            <span id="gridSizeBadge" class="grid-size-badge">4x4</span>
+                        </div>
+                        <p>点亮任意一条直线或对角线，就算今天拿到 Bingo。</p>
+                        <div class="reward-track" aria-hidden="true">
+                            <span></span><span></span><span></span><span></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="momentum-marquee" aria-hidden="true">
+                    <div class="momentum-track">
+                        <span>Start today</span><span>Light the line</span><span>Review gently</span><span>Keep the streak</span>
+                        <span>Start today</span><span>Light the line</span><span>Review gently</span><span>Keep the streak</span>
+                    </div>
                 </div>
             </header>
 
-            <section class="px-6 mb-4 flex items-center bg-white rounded-2xl mx-4 p-4 shadow-sm border border-gray-100">
-                <div class="relative w-14 h-14 flex-shrink-0 flex justify-center items-center mr-4">
-                    <svg class="w-full h-full absolute top-0 left-0" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="42" fill="transparent" stroke="var(--panel-muted)" stroke-width="8"></circle>
-                        <circle id="progressRing" class="progress-ring__circle" cx="50" cy="50" r="42" fill="transparent" stroke="#3b82f6" stroke-width="8" stroke-linecap="round" stroke-dasharray="263.89" stroke-dashoffset="263.89"></circle>
-                    </svg>
-                    <span id="progressText" class="absolute text-xs font-bold text-gray-800">0%</span>
-                </div>
-                <div>
-                    <div class="flex items-center space-x-2">
-                        <h2 class="text-base font-bold text-gray-900" id="progressStatusText">进行中</h2>
-                        <span id="gridSizeBadge" class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-semibold">4x4</span>
+            <section class="mood-row">
+                <button onclick="cycleMood('start')" class="mood-button btn-press">
+                    <div class="mood-copy">
+                        <i class="fas fa-sun"></i>
+                        <span>晨间状态</span>
                     </div>
-                    <p class="text-[11px] text-gray-500 mt-1">连成任意直线或对角线即达成。</p>
-                </div>
-            </section>
-
-            <section class="px-6 mb-5 flex space-x-3">
-                <button onclick="cycleMood('start')" class="flex-1 bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center justify-between transition btn-press">
-                    <div class="flex items-center space-x-2">
-                        <i class="fas fa-sun text-gray-400 text-sm"></i>
-                        <span class="text-xs font-bold text-gray-600">晨间状态</span>
-                    </div>
-                    <span id="moodStartIcon" class="text-lg text-gray-300"><i class="fas fa-minus-circle"></i></span>
+                    <span id="moodStartIcon" class="mood-value"><i class="fas fa-minus-circle"></i></span>
                 </button>
-                <button onclick="cycleMood('end')" class="flex-1 bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center justify-between transition btn-press">
-                    <div class="flex items-center space-x-2">
-                        <i class="fas fa-moon text-gray-400 text-sm"></i>
-                        <span class="text-xs font-bold text-gray-600">晚间复盘</span>
+                <button onclick="cycleMood('end')" class="mood-button btn-press">
+                    <div class="mood-copy">
+                        <i class="fas fa-moon"></i>
+                        <span>晚间复盘</span>
                     </div>
-                    <span id="moodEndIcon" class="text-lg text-gray-300"><i class="fas fa-minus-circle"></i></span>
+                    <span id="moodEndIcon" class="mood-value"><i class="fas fa-minus-circle"></i></span>
                 </button>
             </section>
 
-            <section class="px-6 mb-3">
+            <section class="intent-strip">
                 <button type="button" class="intent-summary-card btn-press" onclick="openTodayIntentDrawer()">
                     <span class="intent-summary-icon"><i class="fas fa-bullseye"></i></span>
                     <span class="intent-summary-copy">
@@ -92,14 +105,20 @@
                 </button>
             </section>
 
-            <section class="bingo-grid flex-1" id="gridContainer"></section>
+            <section class="board-shell">
+                <div class="board-header">
+                    <span>今日盘面</span>
+                    <span>轻点格子完成任务</span>
+                </div>
+                <div class="bingo-grid flex-1" id="gridContainer"></div>
+            </section>
             
-            <section class="px-6 py-6 mt-auto border-t border-gray-100 bg-white">
-                <div class="flex space-x-3">
-                    <button onclick="shuffleGrid()" class="btn-press flex-1 bg-blue-50 text-blue-600 py-3 rounded-xl font-semibold text-sm flex justify-center items-center space-x-2 border border-blue-100">
+            <section class="home-actions">
+                <div class="home-action-grid">
+                    <button onclick="shuffleGrid()" class="btn-press action-button primary-action">
                         <i class="fas fa-random"></i><span>重新生成</span>
                     </button>
-                    <button onclick="resetBingoGrid()" class="btn-press flex-1 bg-gray-50 text-gray-600 py-3 rounded-xl font-semibold text-sm flex justify-center items-center space-x-2 border border-gray-200">
+                    <button onclick="resetBingoGrid()" class="btn-press action-button secondary-action">
                         <i class="fas fa-undo"></i><span>清空状态</span>
                     </button>
                 </div>
@@ -164,11 +183,11 @@
         </div>
 
         <nav class="fixed bottom-0 w-full max-w-[480px] bg-white border-t border-gray-100 flex justify-around items-center pb-safe z-40" style="padding-bottom: env(safe-area-inset-bottom);">
-            <button onclick="switchTab('bingo')" id="nav-bingo" class="flex-1 py-4 flex flex-col items-center text-blue-600 transition">
+            <button onclick="switchTab('bingo')" id="nav-bingo" class="nav-button active">
                 <i class="fas fa-th-large text-lg mb-1"></i>
                 <span class="text-[10px] font-bold">Bingo</span>
             </button>
-            <button onclick="switchTab('discipline')" id="nav-discipline" class="flex-1 py-4 flex flex-col items-center text-gray-400 transition hover:text-gray-600">
+            <button onclick="switchTab('discipline')" id="nav-discipline" class="nav-button">
                 <i class="fas fa-shield-alt text-lg mb-1"></i>
                 <span class="text-[10px] font-bold">纪律系统</span>
             </button>
@@ -311,6 +330,6 @@
         <div id="toast" class="toast-notification"></div>
     </div>
 
-    <script src="./assets/app.js" defer></script>
+    <script src="./assets/app.js?v=9" defer></script>
 </body>
 </html>

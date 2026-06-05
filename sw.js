@@ -1,13 +1,15 @@
-const CACHE_NAME = 'daily-bingo-cache-v7';
+const CACHE_NAME = 'daily-bingo-cache-v9';
 const STATIC_ASSETS = [
   './index.html',
-  './assets/styles.css',
-  './assets/app.js',
+  './assets/styles.css?v=9',
+  './assets/app.js?v=9',
   './manifest.json',
   './android-chrome-192x192.png',
   './icon-512.png',
   'https://cdn.tailwindcss.com',
   'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
 

@@ -224,6 +224,74 @@
             setTimeout(() => ripple.remove(), 540);
         }
 
+        function hasTasteMotion() {
+            return window.gsap && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        }
+
+        function prepareScrubReveal() {
+            const copy = document.querySelector('.home-progress-copy p');
+            if (!copy || copy.dataset.revealReady === 'true') return;
+            const text = copy.textContent.trim();
+            copy.innerHTML = [...text].map(char => {
+                const safeChar = char === ' ' ? '&nbsp;' : escapeHTML(char);
+                return `<span class="reveal-token">${safeChar}</span>`;
+            }).join('');
+            copy.dataset.revealReady = 'true';
+        }
+
+        function animateFreshGridCells() {
+            if (!hasTasteMotion()) return;
+            gsap.fromTo('#gridContainer .grid-item',
+                { opacity: 0, scale: 0.84, y: 14 },
+                { opacity: 1, scale: 1, y: 0, duration: 0.52, stagger: { each: 0.018, grid: 'auto', from: 'center' }, ease: 'power3.out' }
+            );
+        }
+
+        function initTasteMotion() {
+            prepareScrubReveal();
+            if (!hasTasteMotion()) return;
+            if (window.ScrollTrigger) gsap.registerPlugin(ScrollTrigger);
+
+            gsap.fromTo('.home-hero',
+                { opacity: 0, y: -18 },
+                { opacity: 1, y: 0, duration: 0.72, ease: 'power3.out' }
+            );
+            gsap.fromTo('.home-title',
+                { opacity: 0, y: 18, letterSpacing: '-0.12em' },
+                { opacity: 1, y: 0, letterSpacing: '-0.075em', duration: 0.82, ease: 'power3.out', delay: 0.08 }
+            );
+            gsap.fromTo('.home-progress-panel, .mood-button, .intent-summary-card, .board-shell',
+                { opacity: 0, y: 22, scale: 0.97 },
+                { opacity: 1, y: 0, scale: 1, duration: 0.68, stagger: 0.055, ease: 'power3.out', delay: 0.18 }
+            );
+
+            if (window.ScrollTrigger) {
+                gsap.fromTo('.hero-art',
+                    { scale: 0.82, opacity: 0.24, rotate: -14 },
+                    {
+                        scale: 1.02,
+                        opacity: 0.52,
+                        rotate: -8,
+                        ease: 'none',
+                        scrollTrigger: { trigger: '.home-hero', start: 'top top', end: 'bottom top', scrub: true }
+                    }
+                );
+                gsap.to('.reveal-token', {
+                    opacity: 1,
+                    y: 0,
+                    stagger: 0.018,
+                    ease: 'none',
+                    scrollTrigger: { trigger: '.home-progress-panel', start: 'top 72%', end: 'bottom 38%', scrub: true }
+                });
+                gsap.fromTo('.board-shell',
+                    { scale: 0.96, opacity: 0.78 },
+                    { scale: 1, opacity: 1, ease: 'none', scrollTrigger: { trigger: '.board-shell', start: 'top 84%', end: 'bottom 58%', scrub: true } }
+                );
+            }
+
+            animateFreshGridCells();
+        }
+
         function switchTab(tab) {
             HAPTIC.play(HAPTIC.tap);
             const viewBingo = document.getElementById('view-bingo');
@@ -233,16 +301,17 @@
 
             if (tab === 'bingo') {
                 viewBingo.classList.remove('hidden'); viewDisc.classList.add('hidden');
-                navBingo.className = "flex-1 py-4 flex flex-col items-center text-blue-600 transition";
-                navDisc.className = "flex-1 py-4 flex flex-col items-center text-gray-400 transition hover:text-gray-600";
+                navBingo.className = "nav-button active";
+                navDisc.className = "nav-button";
                 document.getElementById('intentFab')?.classList.remove('hidden');
             } else {
                 viewBingo.classList.add('hidden'); viewDisc.classList.remove('hidden');
-                navBingo.className = "flex-1 py-4 flex flex-col items-center text-gray-400 transition hover:text-gray-600";
-                navDisc.className = "flex-1 py-4 flex flex-col items-center text-slate-800 transition";
+                navBingo.className = "nav-button";
+                navDisc.className = "nav-button active";
                 document.getElementById('intentFab')?.classList.add('hidden');
                 closeTodayIntentDrawer();
             }
+            if (window.ScrollTrigger) setTimeout(() => window.ScrollTrigger.refresh(), 60);
         }
 
         function exportData() {
@@ -371,6 +440,7 @@
                     if (animatedCell) animatedCell.classList.remove('just-completed');
                 }, 680);
             }
+            animateFreshGridCells();
         }
         function getSelectableBingoTasks(source = 'library') {
             const base = source === 'board' ? bingoState.currentTasks : bingoState.taskLibrary;
@@ -610,12 +680,12 @@
             const ring = document.getElementById('progressRing'), text = document.getElementById('progressText'), stat = document.getElementById('progressStatusText');
             ring.style.strokeDashoffset = 263.89 - ((bingoState.hasBingo ? 100 : p) / 100) * 263.89; ring.setAttribute('stroke', bingoState.hasBingo ? cssVar('--gold') : cssVar('--primary'));
             text.innerText = `${bingoState.hasBingo ? 100 : p}%`; text.style.color = bingoState.hasBingo ? cssVar('--gold-text') : cssVar('--text-main');
-            stat.innerText = bingoState.hasBingo ? "BINGO! 任务达成" : "打卡进行中"; stat.className = bingoState.hasBingo ? "text-base font-bold text-yellow-600" : "text-base font-bold text-gray-900";
+            stat.innerText = bingoState.hasBingo ? "BINGO! 任务达成" : "打卡进行中"; stat.className = bingoState.hasBingo ? "home-status is-bingo" : "home-status";
         }
         function shuffleGrid() { HAPTIC.play(HAPTIC.reset); generateBingoGrid(); showToast("已重新生成"); }
         function resetBingoGrid() { HAPTIC.play(HAPTIC.reset); bingoState.currentStates.fill(false); bingoState.hasBingo = false; bingoState.bingoLines = []; bingoState.lastCompletedIndex = null; checkBingoWin(); renderBingoGrid(); showToast("状态已清空"); }
         function cycleMood(type) { HAPTIC.play(HAPTIC.tap); let idx = MOODS.findIndex(m => m.val === bingoState.todayMood[type]); bingoState.todayMood[type] = MOODS[(idx + 1) % MOODS.length].val; updateBingoHistory(); updateMoodUI(); }
-        function updateMoodUI() { ['start', 'end'].forEach(type => { const mood = MOODS.find(m => m.val === bingoState.todayMood[type]) || MOODS[0]; const el = document.getElementById(type === 'start' ? 'moodStartIcon' : 'moodEndIcon'); el.innerHTML = mood.icon; el.className = `text-lg ${mood.color}`; }); }
+        function updateMoodUI() { ['start', 'end'].forEach(type => { const mood = MOODS.find(m => m.val === bingoState.todayMood[type]) || MOODS[0]; const el = document.getElementById(type === 'start' ? 'moodStartIcon' : 'moodEndIcon'); el.innerHTML = mood.icon; el.className = `mood-value ${mood.color}`; }); }
         function updateTodayIntent(field, value) {
             if (!bingoState.todayIntent) bingoState.todayIntent = createEmptyTodayIntent();
             if (field.startsWith('lightTask')) {
@@ -1387,5 +1457,6 @@
             setupButtonHaptics();
             initBingo();
             initDiscipline();
+            initTasteMotion();
             document.getElementById('newTaskInput').addEventListener('keypress', e => e.key === 'Enter' && addBingoTask());
         });
